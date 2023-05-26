@@ -1,6 +1,6 @@
 #set page(
     paper: "a4",
-    margin:  (x: 1.8cm, y: 1.5cm),
+    margin:  (x: 1.5cm, y: 1.5cm),
     numbering: "1",
 )
 
@@ -38,7 +38,7 @@
     align(center)[
         Vasco Miguel Cardoso Correia \
         ist194188 \
-        #todo[preencher]\@tecnico.ulisboa.pt \
+        vasco.cardoso.correia\@tecnico.ulisboa.pt \
     ],
 )
 
