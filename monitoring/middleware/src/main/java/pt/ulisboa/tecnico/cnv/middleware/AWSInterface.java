@@ -38,7 +38,7 @@ public class AWSInterface {
     private static String SEC_GROUP_ID = System.getenv("AWS_SECURITY_GROUP");
 
     // Total observation time in milliseconds.
-    private static long OBS_TIME = 1000 * 60 * 10; // 5 minutes
+    private static long OBS_TIME = 1000 * 60 * 10; // 10 minutes
     // Time between each query for instance state
     private static long QUERY_COOLDOWN = 1000 * 10; // 10 seconds
 

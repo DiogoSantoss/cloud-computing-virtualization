@@ -56,9 +56,6 @@ public class AutoScaler implements Runnable {
         }
 
         LOGGER.info("Average CPU Utilization: " + avgCPUUtilization + " (" + results.size() + " instances)");
-
-        System.out.println(avgCPUUtilization < 20 );
-        this.awsInterface.getAliveInstances().forEach(i -> System.out.println(i.getInstanceId()));
         
         // (TODO) Compute average Load over all instances
         if (avgCPUUtilization > 80) {

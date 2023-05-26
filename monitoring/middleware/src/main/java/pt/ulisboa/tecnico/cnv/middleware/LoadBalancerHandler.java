@@ -109,6 +109,7 @@ public class LoadBalancerHandler implements HttpHandler {
 
         } catch (Exception e) {
             LOGGER.info("Error: " + e.getMessage());
+            e.printStackTrace();
             throw new RuntimeException(e);
         }
 
