@@ -30,8 +30,6 @@ public class WebServer {
                 case "metrics":
                     Metrics.writeStatisticsToCsv();
                     break;
-                case "exit":
-                    break;
             }
         }
     }

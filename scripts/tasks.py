@@ -5,9 +5,6 @@ import csv
 import numpy as np
 import base64
 
-
-# y = ax + by + cz   <------------------------
-
 def sendRequest(endpoint, *args, image_files=[]):
 
     if len(image_files) > 0:

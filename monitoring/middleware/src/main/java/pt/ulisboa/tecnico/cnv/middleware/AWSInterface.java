@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.ArrayList;
 import java.util.Date;
@@ -29,22 +30,22 @@ import pt.ulisboa.tecnico.cnv.middleware.Utils.Pair;
 
 public class AWSInterface {
 
+    private static final Logger LOGGER = Logger.getLogger(AWSInterface.class.getName());
+
     private static String AWS_REGION = System.getenv("AWS_DEFAULT_REGION");
     private static String AMI_ID = System.getenv("AWS_AMI_ID");
     private static String KEY_NAME = System.getenv("AWS_KEYPAR_NAME");
     private static String SEC_GROUP_ID = System.getenv("AWS_SECURITY_GROUP");
 
-    // Time to wait until the instance is terminated (in milliseconds).
-    private static long WAIT_TIME = 1000 * 60 * 10; // 10 minutes
     // Total observation time in milliseconds.
-    private static long OBS_TIME = 1000 * 60 * 20; // 20 minutes
+    private static long OBS_TIME = 1000 * 60 * 10; // 5 minutes
     // Time between each query for instance state
     private static long QUERY_COOLDOWN = 1000 * 10; // 10 seconds
 
     private AmazonEC2 ec2;
     private AmazonCloudWatch cloudWatch;
 
-    private Set<Instance> aliveInstances = ConcurrentHashMap.newKeySet();
+    private Set<Instance> aliveInstances = new HashSet<Instance>();
     private AtomicInteger idx = new AtomicInteger(0);
 
     public AWSInterface() {
@@ -54,6 +55,7 @@ public class AWSInterface {
                 .withCredentials(new EnvironmentVariableCredentialsProvider()).build();
 
         this.aliveInstances = queryAliveInstances();
+        LOGGER.info("Alive instances: " + this.aliveInstances.size());
     }
 
     public Set<Instance> getAliveInstances() {
@@ -68,6 +70,9 @@ public class AWSInterface {
      * Blocking
      */
     public List<String> createInstances(int count) {
+
+        LOGGER.info("Creating " + count + " instances");
+
         RunInstancesRequest runInstancesRequest = new RunInstancesRequest();
         runInstancesRequest.withImageId(AMI_ID)
                 .withInstanceType("t2.micro")
@@ -85,19 +90,21 @@ public class AWSInterface {
         }
 
         // wait until all instances are running
-        while (newInstances.stream().filter(i -> i.getState().getName().equals("running")).count() != count) {
-            newInstances = ec2.describeInstances(
+        while (newInstances.stream().filter(i -> i.getState().getName().equals("pending")).count() != 0) {
+
+            List<Reservation> reservations = this.ec2.describeInstances(
                     new DescribeInstancesRequest()
                             .withFilters(new Filter()
                                     .withName("reservation-id")
                                     .withValues(reservationId)))
-                    .getReservations().get(0).getInstances();
+                    .getReservations();
 
-            newInstances.forEach(i -> System.out.println(i.getState().getName()));
+            if (reservations.size() > 0)
+                newInstances = reservations.get(0).getInstances();
+            else
+                break;
 
             try {
-                System.out
-                        .println(String.format("Waiting for instances to spawn for %d seconds", QUERY_COOLDOWN / 1000));
                 Thread.sleep(QUERY_COOLDOWN);
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -106,19 +113,29 @@ public class AWSInterface {
 
         this.aliveInstances.addAll(newInstances);
 
+        LOGGER.info("Total instances: " + this.aliveInstances.size());
+
         // TODO check if healthy?
 
         return newInstances.stream().map(i -> i.getInstanceId()).collect(Collectors.toList());
     }
 
     public void terminateInstance() {
+
+        // TODO: Should terminate lowest CPU utilization instance
+
+        // Remove from aliveInstances to prevent new requests
         Instance instance = this.aliveInstances.iterator().next();
-        if (instance == null) {
+        if (instance == null)
             throw new RuntimeException("No instances to terminate");
-        }
+        this.aliveInstances.remove(instance);
+
+        // TODO: Wait for instance to terminate requests
+
         TerminateInstancesRequest termInstanceReq = new TerminateInstancesRequest();
         termInstanceReq.withInstanceIds(instance.getInstanceId());
         this.ec2.terminateInstances(termInstanceReq);
+
     }
 
     public Set<Instance> queryInstances() {
@@ -134,7 +151,7 @@ public class AWSInterface {
         Set<Instance> instances = new HashSet<Instance>();
         for (Reservation reservation : this.ec2.describeInstances().getReservations()) {
             for (Instance instance : reservation.getInstances()) {
-                if (instance.getState().getName().equals("running")) {
+                if (instance.getState().getName().equals("running") && instance.getImageId().equals(AMI_ID)) {
                     instances.add(instance);
                 }
             }
@@ -162,6 +179,10 @@ public class AWSInterface {
                     .withStatistics("Average")
                     .withDimensions(instanceDimension)
                     .withEndTime(new Date());
+
+            this.cloudWatch.getMetricStatistics(request).getDatapoints().stream().forEach(
+                    d -> LOGGER.info("Instance " + iid + " CPU utilization: " + d.getAverage() + "%" + " at "
+                            + d.getTimestamp()));
 
             double averageCPUUtilization = this.cloudWatch.getMetricStatistics(request).getDatapoints().stream()
                     .mapToDouble(Datapoint::getAverage).average().orElse(Double.NaN);

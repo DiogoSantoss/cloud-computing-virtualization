@@ -6,9 +6,11 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.logging.Logger;
 
 import com.sun.net.httpserver.HttpHandler;
 import com.amazonaws.services.ec2.model.Instance;
@@ -16,12 +18,16 @@ import com.sun.net.httpserver.HttpExchange;
 
 public class LoadBalancerHandler implements HttpHandler {
 
+    private static final Logger LOGGER = Logger.getLogger(LoadBalancerHandler.class.getName());
+
     private AWSInterface awsInterface;
 
     private Map<String, List<Request>> requests;
 
     public LoadBalancerHandler(AWSInterface awsInterface) {
         super();
+        this.awsInterface = awsInterface;
+        this.requests = new HashMap<>();
     }
 
     /*
@@ -71,24 +77,41 @@ public class LoadBalancerHandler implements HttpHandler {
     }
 
     @Override
-    public void handle(HttpExchange t) throws IOException {
+    public void handle(HttpExchange t) {
 
-        Optional<Instance> optInstance = getNextInstance();
+        try {
 
-        if (optInstance.isEmpty()) {
-            t.sendResponseHeaders(500, 0);
-            t.close();
-            return;
+            LOGGER.info("Received request: " + t.getRequestURI().toString());
+    
+            Optional<Instance> optInstance = getNextInstance();
+    
+            if (optInstance.isEmpty()) {
+                LOGGER.info("No instances available to handle request.");
+                t.sendResponseHeaders(500, 0);
+                t.close();
+                return;
+            }
+
+            Instance instance = optInstance.get();
+    
+            Request request = new Request(t.getRequestURI().toString());
+
+            this.requests.putIfAbsent(instance.getInstanceId(), new ArrayList<Request>());
+            this.requests.get(instance.getInstanceId()).add(request);
+    
+            LOGGER.info("Forwarding request to instance: " + instance.getInstanceId());
+    
+            HttpURLConnection con = sendRequestToWorker(instance, request, t);
+            
+            this.requests.get(instance.getInstanceId()).remove(request);
+
+            replyToClient(con, t);
+
+        } catch (Exception e) {
+            LOGGER.info("Error: " + e.getMessage());
+            throw new RuntimeException(e);
         }
 
-        Instance instance = optInstance.get();
-        Request request = new Request(t.getRequestURI().toString());
-
-        requests.putIfAbsent(instance.getInstanceId(), new ArrayList<Request>());
-        requests.get(instance.getInstanceId()).add(request);
-
-        HttpURLConnection con = sendRequestToWorker(instance, request, t);
-        replyToClient(con, t);
     }
 
     private HttpURLConnection sendRequestToWorker(Instance instance, Request request, HttpExchange t) throws IOException {

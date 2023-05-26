@@ -1,6 +1,6 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
-# source my_config.sh
+source my_config.sh
 
 echo "Creating Worker Image..."
 

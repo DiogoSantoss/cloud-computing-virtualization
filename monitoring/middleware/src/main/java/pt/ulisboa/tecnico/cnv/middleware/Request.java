@@ -7,9 +7,9 @@ public class Request {
 
     private enum Endpoint {
 
-        COMPRESSION("compression"),
-        SIMULATION("simulation"),
-        WAR("war");
+        COMPRESSION("compressImage"),
+        SIMULATION("simulate"),
+        WAR("insectwar");
 
         private String endpoint;
 
@@ -23,8 +23,8 @@ public class Request {
         }
     }
 
+    private String originalURI;
     private Endpoint endpoint;
-
     private List<String> arguments;
 
     /*
@@ -33,16 +33,18 @@ public class Request {
      */
     public Request(String URI) {
 
+        this.originalURI = URI;
+
         String[] parts = URI.split("\\?");
 
         switch (parts[0].split("/")[1]) {
-            case "compression":
+            case "compressImage":
                 this.endpoint = Endpoint.COMPRESSION;
                 break;
-            case "simulation":
+            case "simulate":
                 this.endpoint = Endpoint.SIMULATION;
                 break;
-            case "war":
+            case "insectwar":
                 this.endpoint = Endpoint.WAR;
                 break;
         }
@@ -63,6 +65,6 @@ public class Request {
 
     @Override
     public String toString() {
-        return "/" + this.endpoint + "?" + String.join("&", this.arguments);
+        return this.originalURI;
     }
 }
