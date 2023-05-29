@@ -10,12 +10,23 @@ import java.util.stream.Collectors;
 import java.util.ArrayList;
 import java.util.Date;
 
+import com.amazonaws.AmazonClientException;
+import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
 import com.amazonaws.services.cloudwatch.AmazonCloudWatchClientBuilder;
 import com.amazonaws.services.cloudwatch.model.Datapoint;
 import com.amazonaws.services.cloudwatch.model.Dimension;
 import com.amazonaws.services.cloudwatch.model.GetMetricStatisticsRequest;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsyncClientBuilder;
+import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
+import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
+import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
+import com.amazonaws.services.dynamodbv2.model.KeyType;
+import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
+import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType;
+import com.amazonaws.services.dynamodbv2.util.TableUtils;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
@@ -44,6 +55,9 @@ public class AWSInterface {
 
     private AmazonEC2 ec2;
     private AmazonCloudWatch cloudWatch;
+    // private LambdaClient lambdaClient;
+    private AmazonDynamoDB dynamoDB;
+    private String tableName = "Statistics";
 
     private Set<Instance> aliveInstances = new HashSet<Instance>();
     private AtomicInteger idx = new AtomicInteger(0);
@@ -52,6 +66,10 @@ public class AWSInterface {
         this.ec2 = AmazonEC2ClientBuilder.standard().withRegion(AWS_REGION)
                 .withCredentials(new EnvironmentVariableCredentialsProvider()).build();
         this.cloudWatch = AmazonCloudWatchClientBuilder.standard().withRegion(AWS_REGION)
+                .withCredentials(new EnvironmentVariableCredentialsProvider()).build();
+        // this.lambdaClient =
+        // LambdaClient.builder().credentialsProvider(EnvironmentVariableCredentialsProvider.create()).build();
+        this.dynamoDB = AmazonDynamoDBAsyncClientBuilder.standard().withRegion(AWS_REGION)
                 .withCredentials(new EnvironmentVariableCredentialsProvider()).build();
 
         this.aliveInstances = queryAliveInstances();
@@ -193,4 +211,46 @@ public class AWSInterface {
         return results;
     }
 
+    /*
+     * public void invokeLambdaFunction(String functionName) {
+     * try {
+     * String json = "{\"number\":\"10\"}";
+     * SdkBytes payload = SdkBytes.fromUtf8String(json) ;
+     * 
+     * InvokeRequest request =
+     * InvokeRequest.builder().functionName(functionName).payload(payload).build();
+     * InvokeResponse res = this.lambdaClient.invoke(request);
+     * 
+     * String value = res.payload().asUtf8String() ;
+     * System.out.println(value);
+     * 
+     * } catch(LambdaException e) {
+     * LOGGER.info(e.getMessage());
+     * }
+     * }
+     */
+
+    /*
+     * Create DynamoDB table if it does not exists yet
+     * Stores statistics about each request
+     */
+    public void createTableIfNotExists() {
+        // Create a table with a primary hash key named 'name', which holds a string
+        CreateTableRequest createTableRequest = new CreateTableRequest().withTableName(tableName)
+                .withKeySchema(new KeySchemaElement().withAttributeName("name").withKeyType(KeyType.HASH))
+                .withAttributeDefinitions(
+                        new AttributeDefinition().withAttributeName("name").withAttributeType(ScalarAttributeType.S))
+                .withProvisionedThroughput(
+                        new ProvisionedThroughput().withReadCapacityUnits(1L).withWriteCapacityUnits(1L));
+
+        // Create table if it does not exist yet
+        TableUtils.createTableIfNotExists(dynamoDB, createTableRequest);
+
+        try {
+            // wait for the table to move into ACTIVE state
+            TableUtils.waitUntilActive(dynamoDB, tableName);
+        } catch(InterruptedException e) {
+            LOGGER.info(e.getMessage());
+        }
+    }
 }
