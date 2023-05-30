@@ -7,6 +7,7 @@ import java.util.Scanner;
 import pt.ulisboa.tecnico.cnv.foxesrabbits.SimulationHandler;
 import pt.ulisboa.tecnico.cnv.compression.CompressImageHandlerImpl;
 import pt.ulisboa.tecnico.cnv.insectwar.WarSimulationHandler;
+import pt.ulisboa.tecnico.cnv.webserver.Uploader;
 import pt.ulisboa.tecnico.cnv.javassist.tools.Metrics;
 
 public class WebServer {
@@ -18,6 +19,10 @@ public class WebServer {
         server.createContext("/compressimage", new CompressImageHandlerImpl());
         server.createContext("/insectwar", new WarSimulationHandler());
         server.start();
+
+        Uploader uploader = new Uploader();
+        Thread uploaderThread = new Thread(uploader);
+        uploaderThread.start();
 
         Scanner scanner = new Scanner(System.in);
 

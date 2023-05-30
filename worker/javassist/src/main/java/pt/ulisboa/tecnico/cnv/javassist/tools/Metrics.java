@@ -4,7 +4,9 @@ import java.io.File;
 import java.io.PrintWriter;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import javassist.CannotCompileException;
 import javassist.CtBehavior;
@@ -12,7 +14,7 @@ import javassist.CtClass;
 
 public class Metrics extends AbstractJavassistTool {
 
-    protected static class Pair<T, K> {
+    public static class Pair<T, K> {
         private T left;
         private K right;
 
@@ -30,7 +32,7 @@ public class Metrics extends AbstractJavassistTool {
         }
     }
 
-    protected static class Statistics {
+    public static class Statistics {
         private long basicBlockCount;
         private long instCount;
 
@@ -56,9 +58,14 @@ public class Metrics extends AbstractJavassistTool {
 
     private static Map<Long, Pair<String, Statistics>> threadIdToRequestAndStatistics = new ConcurrentHashMap<>();
     private static Map<String, Statistics> requestToStatistics = new ConcurrentHashMap<>();
+    private static Queue<Pair<String, Statistics>> queue = new ConcurrentLinkedQueue<>();
 
     public Metrics(List<String> packageNameList, String writeDestination) {
         super(packageNameList, writeDestination);
+    }
+
+    public static Queue<Pair<String, Statistics>> getQueue() {
+        return queue;
     }
 
     public static Map<String, Statistics> getRequestToStatistics() {
@@ -100,7 +107,12 @@ public class Metrics extends AbstractJavassistTool {
         Statistics statistics = pair.getRight();
         // If request already has statistics, ignore
         // Assume equal requests have equal statistics
-        requestToStatistics.putIfAbsent(request, statistics);
+        Statistics s = requestToStatistics.putIfAbsent(request, statistics);
+        
+        // New request (no previous mapping)
+        if (s  == null) {
+            queue.offer(new Pair<>(request, statistics));
+        }
 
         // Clear mapping
         threadIdToRequestAndStatistics.remove(threadId);

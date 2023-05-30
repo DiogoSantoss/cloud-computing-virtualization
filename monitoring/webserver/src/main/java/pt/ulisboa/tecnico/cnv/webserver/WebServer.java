@@ -6,7 +6,6 @@ import pt.ulisboa.tecnico.cnv.middleware.AWSInterface;
 import java.net.InetSocketAddress;
 import com.sun.net.httpserver.HttpServer;
 
-
 public class WebServer {
  
     public static void main(String[] args) throws Exception {
