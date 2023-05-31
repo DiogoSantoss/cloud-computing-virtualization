@@ -153,3 +153,10 @@ replay_pid*
 
 # Ignore Gradle build output directory
 build
+
+
+### Created by https://www.gitignore.io
+### direnv ###
+.direnv
+.envrc
+
