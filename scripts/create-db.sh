@@ -6,6 +6,11 @@ aws dynamodb delete-table \
   --region $AWS_DEFAULT_REGION \
   --table-name $DYNAMO_DB_TABLE_NAME 2>> /dev/null
 
+echo "Waiting until table is deleted"
+aws dynamodb wait table-not-exists \
+  --region $AWS_DEFAULT_REGION \
+  --table-name $DYNAMO_DB_TABLE_NAME
+
 echo "Creating the table"
 aws dynamodb create-table \
   --region $AWS_DEFAULT_REGION \
