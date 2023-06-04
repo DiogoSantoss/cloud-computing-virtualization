@@ -1,6 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-source my_config.sh
+# only source script if hostname is not chord (vasco)
+[[ $(hostname) -ne "chord" ]] && source my_config.sh
 
 echo "Creating loadbalancer/autoscaler instance..."
 

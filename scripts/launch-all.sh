@@ -1,6 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-source my_config.sh
+# Only source script if hostname is not chord (vasco)
+[[ $(hostname) -ne "chord" ]] && source my_config.sh
 
 ./create-worker-image.sh
 ./launch-monitoring.sh

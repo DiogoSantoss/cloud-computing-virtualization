@@ -1,6 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-source my_config.sh
+# Only source script if hostname is not chord (vasco)
+[[ $(hostname) -ne "chord" ]] && source my_config.sh
 
 # Terminate worker instance
 aws ec2 terminate-instances --instance-ids $(cat monitoring.id)
