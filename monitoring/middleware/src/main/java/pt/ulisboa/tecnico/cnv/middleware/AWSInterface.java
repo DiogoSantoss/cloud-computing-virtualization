@@ -208,24 +208,27 @@ public class AWSInterface {
         return results;
     }
 
-    /*
-     * public void invokeLambdaFunction(String functionName) {
-     * try {
-     * String json = "{\"number\":\"10\"}";
-     * SdkBytes payload = SdkBytes.fromUtf8String(json) ;
-     * 
-     * InvokeRequest request =
-     * InvokeRequest.builder().functionName(functionName).payload(payload).build();
-     * InvokeResponse res = this.lambdaClient.invoke(request);
-     * 
-     * String value = res.payload().asUtf8String() ;
-     * System.out.println(value);
-     * 
-     * } catch(LambdaException e) {
-     * LOGGER.info(e.getMessage());
-     * }
-     * }
-     */
+    public static void callLambda() {
+
+        try {
+            String functionName = "worker-lambda";
+            LambdaClient awsLambda = LambdaClient.builder().credentialsProvider(EnvironmentVariableCredentialsProvider.create()).build();
+
+            String json = "{\"number\":\"10\"}";
+            SdkBytes payload = SdkBytes.fromUtf8String(json) ;
+
+            InvokeRequest request = InvokeRequest.builder().functionName(functionName).payload(payload).build();
+
+            InvokeResponse res = awsLambda.invoke(request);
+            String value = res.payload().asUtf8String() ;
+            System.out.println(value);
+
+            awsLambda.close();
+
+        } catch(LambdaException e) {
+            LOGGER.info(e.getMessage());
+        }
+    }
 
     /*
      * Create DynamoDB table if it does not exists yet
