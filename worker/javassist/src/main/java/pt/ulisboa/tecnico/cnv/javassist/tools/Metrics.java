@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 import javassist.CannotCompileException;
 import javassist.CtBehavior;
@@ -58,14 +57,12 @@ public class Metrics extends AbstractJavassistTool {
 
     private static Map<Long, Pair<String, Statistics>> threadIdToRequestAndStatistics = new ConcurrentHashMap<>();
     private static Map<String, Statistics> requestToStatistics = new ConcurrentHashMap<>();
-    private static Queue<Pair<String, Statistics>> queue = new ConcurrentLinkedQueue<>();
+
+    // Let's hope only one instance is created
+    private static final DynamoWriter uploader = new DynamoWriter();
 
     public Metrics(List<String> packageNameList, String writeDestination) {
         super(packageNameList, writeDestination);
-    }
-
-    public static Queue<Pair<String, Statistics>> getQueue() {
-        return queue;
     }
 
     public static Map<String, Statistics> getRequestToStatistics() {
@@ -111,7 +108,7 @@ public class Metrics extends AbstractJavassistTool {
         
         // New request (no previous mapping)
         if (s  == null) {
-            queue.offer(new Pair<>(request, statistics));
+            uploader.queueMetric(pair);
         }
 
         // Clear mapping
