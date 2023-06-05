@@ -1,6 +1,9 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-source my_config.sh
+# Only source script if hostname is not chord (vasco)
+[[ $(hostname) -ne "chord" ]] && source my_config.sh
+
+# TODO: acho que podemos só martelar isto com role de root
 
 aws iam create-role \
 	--role-name lambda-role \
