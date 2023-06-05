@@ -12,7 +12,7 @@ repositories {
 
 dependencies {
     implementation platform('com.amazonaws:aws-java-sdk-bom:1.12.472')
-    implementation 'com.amazonaws:aws-lambda-java-core:1.2.1'
+    implementation 'com.amazonaws:aws-java-sdk-lambda'
     implementation 'com.amazonaws:aws-java-sdk-ec2'
     implementation 'com.amazonaws:aws-java-sdk-cloudwatch'
     implementation 'com.amazonaws:aws-java-sdk-dynamodb'
