@@ -3,7 +3,6 @@ package pt.ulisboa.tecnico.cnv.javassist.tools;
 import com.amazonaws.services.dynamodbv2.model.*;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -93,7 +92,7 @@ public class DynamoWriter implements Runnable {
      */
     public long getStatistics(String request) {
         // Create key
-        Map<String, AttributeValue> key = new HashMap<String, AttributeValue>();
+        Map<String, AttributeValue> key = new HashMap<>();
         key.put("request", new AttributeValue(request));
 
         // Get item

@@ -15,6 +15,7 @@ dependencies {
     implementation 'com.amazonaws:aws-java-sdk-ec2'
     implementation 'com.amazonaws:aws-java-sdk-cloudwatch'
     implementation 'com.amazonaws:aws-java-sdk-dynamodb'
+    implementation 'com.amazonaws:aws-java-sdk-lambda'
     implementation 'com.amazonaws:aws-java-sdk-iam'
     implementation 'com.amazonaws:aws-java-sdk-sts'
 }

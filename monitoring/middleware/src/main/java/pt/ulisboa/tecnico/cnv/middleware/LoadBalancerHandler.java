@@ -24,9 +24,12 @@ public class LoadBalancerHandler implements HttpHandler {
 
     private Map<String, List<Request>> requests;
 
+    private DynamoDownloader downloader;
+
     public LoadBalancerHandler(AWSInterface awsInterface) {
         super();
         this.awsInterface = awsInterface;
+        this.downloader = new DynamoDownloader();
         this.requests = new HashMap<>();
     }
 
@@ -35,7 +38,7 @@ public class LoadBalancerHandler implements HttpHandler {
      */
     public Optional<Instance> getNextInstance() {
 
-        List<Instance> instances = new ArrayList<Instance>(this.awsInterface.getAliveInstances());
+        List<Instance> instances = new ArrayList<>(this.awsInterface.getAliveInstances());
 
         if (instances.size() == 0)
             return Optional.empty();
