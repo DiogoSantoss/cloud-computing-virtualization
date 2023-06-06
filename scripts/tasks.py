@@ -45,59 +45,80 @@ def sendAllRequests():
         [1, 4, 1]  # scenario NOTA VAI ATE 4 MAS MAIS 1 NO RANGE
     ]
 
-    for i in range(war_args[0][0], war_args[0][1], war_args[0][2]):  # max
-        war_endpoint = "http://localhost:8000/insectwar?max={}&army1=100&army2=100".format(
-            i)
-        requests.get(war_endpoint)
+    # for i in range(war_args[0][0], war_args[0][1], war_args[0][2]):  # max
+    #     war_endpoint = "http://localhost:8000/insectwar?max={}&army1=100&army2=100".format(
+    #         i)
+    #     print(war_endpoint)
+    #     requests.get(war_endpoint)
+    
+    # for i in range(war_args[0][0], war_args[0][1], war_args[0][2]):  # max
+    #     war_endpoint = "http://localhost:8000/insectwar?max={}&army1=50&army2=50".format(
+    #         i)
+    #     print(war_endpoint)
+    #     requests.get(war_endpoint)
 
-    for j in range(war_args[1][0], war_args[1][1], war_args[1][2]):  # army1
-        for i in range(war_args[0][0], war_args[0][1], war_args[0][2]):  # max
+    # for i in range(war_args[0][0], war_args[0][1], war_args[0][2]):  # max
+    #     war_endpoint = "http://localhost:8000/insectwar?max={}&army1=200&army2=200".format(
+    #         i)
+    #     print(war_endpoint)
+    #     requests.get(war_endpoint)
+
+    for i in range(war_args[0][0], war_args[0][1], war_args[0][2]):  # max
+        for j in range(war_args[1][0], war_args[1][1], war_args[1][2]):  # army1    
             for k in range(war_args[2][0], war_args[2][1], war_args[2][2]):  # army2
                 war_endpoint = "http://localhost:8000/insectwar?max={}&army1={}&army2={}".format(
                     i, j, k)
+                print(war_endpoint)
                 requests.get(war_endpoint)
-            break
-        break
 
-    for i in range(war_args[0][0], war_args[0][1], war_args[0][2]):  # max
-        for k in range(war_args[2][0], war_args[2][1], war_args[2][2]):  # army2
-            for j in range(war_args[1][0], war_args[1][1], war_args[1][2]):  # army1
-                war_endpoint = "http://localhost:8000/insectwar?max={}&army1={}&army2={}".format(
-                    i, j, k)
-                requests.get(war_endpoint)
-            break
-        break
+    # for j in range(war_args[1][0], war_args[1][1], war_args[1][2]):  # army1
+    #     for i in range(war_args[0][0], war_args[0][1], war_args[0][2]):  # max
+    #         for k in range(war_args[2][0], war_args[2][1], war_args[2][2]):  # army2
+    #             war_endpoint = "http://localhost:8000/insectwar?max={}&army1={}&army2={}".format(
+    #                 i, j, k)
+    #             requests.get(war_endpoint)
+    #         break
+    #     break
 
-    for j in range(war_args[1][0], war_args[1][1], war_args[1][2]):  # army1 and army2
-        war_endpoint = "http://localhost:8000/insectwar?max=100&army1={}&army2={}".format(
-            j, j)
-        requests.get(war_endpoint)
+    # for i in range(war_args[0][0], war_args[0][1], war_args[0][2]):  # max
+    #     for k in range(war_args[2][0], war_args[2][1], war_args[2][2]):  # army2
+    #         for j in range(war_args[1][0], war_args[1][1], war_args[1][2]):  # army1
+    #             war_endpoint = "http://localhost:8000/insectwar?max={}&army1={}&army2={}".format(
+    #                 i, j, k)
+    #             requests.get(war_endpoint)
+    #         break
+    #     break
 
-    for k in range(simulate_args[2][0], simulate_args[2][1], simulate_args[2][2]):  # scenario
-        for j in range(simulate_args[1][0], simulate_args[1][1], simulate_args[1][2]):  # world
-            # generations
-            for i in range(simulate_args[0][0], simulate_args[0][1], simulate_args[0][2]):
-                simulate_endpoint = "http://localhost:8000/simulate?generations={}&world={}&scenario={}".format(
-                    i, j, k)
-                requests.get(simulate_endpoint)
-            break
-        break
+    # for j in range(war_args[1][0], war_args[1][1], war_args[1][2]):  # army1 and army2
+    #     war_endpoint = "http://localhost:8000/insectwar?max=100&army1={}&army2={}".format(
+    #         j, j)
+    #     requests.get(war_endpoint)
 
-    for k in range(simulate_args[2][0], simulate_args[2][1], simulate_args[2][2]):  # scenario
-        simulate_endpoint = "http://localhost:8000/simulate?generations=10&world=1&scenario={}".format(
-            k)
-        requests.get(simulate_endpoint)
+    # for k in range(simulate_args[2][0], simulate_args[2][1], simulate_args[2][2]):  # scenario
+    #     for j in range(simulate_args[1][0], simulate_args[1][1], simulate_args[1][2]):  # world
+    #         # generations
+    #         for i in range(simulate_args[0][0], simulate_args[0][1], simulate_args[0][2]):
+    #             simulate_endpoint = "http://localhost:8000/simulate?generations={}&world={}&scenario={}".format(
+    #                 i, j, k)
+    #             requests.get(simulate_endpoint)
+    #         break
+    #     break
 
-    for k in range(simulate_args[2][0], simulate_args[2][1], simulate_args[2][2]):  # scenario
-        # generations
-        for i in range(simulate_args[0][0], simulate_args[0][1], simulate_args[0][2]):
-            # world
-            for j in range(simulate_args[1][0], simulate_args[1][1], simulate_args[1][2]):
-                simulate_endpoint = "http://localhost:8000/simulate?generations={}&world={}&scenario={}".format(
-                    i, j, k)
-                requests.get(simulate_endpoint)
-            break
-        break
+    # for k in range(simulate_args[2][0], simulate_args[2][1], simulate_args[2][2]):  # scenario
+    #     simulate_endpoint = "http://localhost:8000/simulate?generations=10&world=1&scenario={}".format(
+    #         k)
+    #     requests.get(simulate_endpoint)
+
+    # for k in range(simulate_args[2][0], simulate_args[2][1], simulate_args[2][2]):  # scenario
+    #     # generations
+    #     for i in range(simulate_args[0][0], simulate_args[0][1], simulate_args[0][2]):
+    #         # world
+    #         for j in range(simulate_args[1][0], simulate_args[1][1], simulate_args[1][2]):
+    #             simulate_endpoint = "http://localhost:8000/simulate?generations={}&world={}&scenario={}".format(
+    #                 i, j, k)
+    #             requests.get(simulate_endpoint)
+    #         break
+    #     break
 
 
 def sendImages():
@@ -165,7 +186,13 @@ if __name__ == "__main__":
                             basicBlocks.append(int(row[4]))
                             instructions.append(int(row[5]))
 
-            plot.set_title(compute_slope_equation(x, instructions))
+            # the line below are about exponential stuff
+            arr = np.polyfit(x, np.log(instructions),1, w=np.sqrt(instructions))
+            slope, intercept = arr
+            equation = "y={:.3e}+exp({:.3e}x)".format(intercept,slope)
+            print(arr)
+            plot.set_title(equation)
+            #plot.set_title(compute_slope_equation(x, instructions))
             plot.set_xlabel(x_label)
             plot.plot(x, basicBlocks, label='Basic Blocks')
             plot.plot(x, instructions, label='Instructions')
@@ -192,19 +219,18 @@ if __name__ == "__main__":
 
         SIZE = (3, 3)
 
-        draw_plot(0, 0, "war", 1, "Iterations", lambda row: int(
-            row[2]) == 100 and int(row[3]) == 100)
-        draw_plot(0, 1, "war", 3, "Army1 Size", lambda row: int(
-            row[1]) == 1 and int(row[2]) == 1)
-        # draw_plot(0, 2, "war", 2, "Army2 Size", lambda row: int(row[1]) == 1 and int(row[3]) == 1)
-        draw_plot(0, 2, "war", 2, "Army1==Army2 Size", lambda row: int(
-            row[1]) == 100 and int(row[3]) == int(row[2]))
-        draw_plot(1, 0, "simulate", 1, "Generations",
-                  lambda row: int(row[2]) == 1 and int(row[3]) == 1)
-        draw_plot(1, 1, "simulate", 3, "Scenario",
-                  lambda row: int(row[1]) == 10 and int(row[2]) == 1)
-        draw_scatter(1, 2, "simulate", 2, "World Size",
-                     lambda row: int(row[1]) == 1 and int(row[3]) == 1)
+        # for requests in line 72
+        draw_plot(0, 0, "war", 1, "Iterations", lambda row: int(row[2]) == 100 and int(row[3]) == 100)
+        draw_plot(0, 1, "war", 1, "Iterations", lambda row: int(row[2]) == 50 and int(row[3]) == 50)
+        draw_plot(0, 2, "war", 1, "Iterations", lambda row: int(row[2]) == 200 and int(row[3]) == 200)
+
+        #draw_plot(0, 0, "war", 1, "Iterations", lambda row: int(row[2]) == 100 and int(row[3]) == 100)
+        #draw_plot(0, 1, "war", 3, "Army1 Size", lambda row: int(row[1]) == 1 and int(row[2]) == 1)
+        #draw_plot(0, 2, "war", 2, "Army2 Size", lambda row: int(row[1]) == 1 and int(row[3]) == 1)
+        #draw_plot(0, 2, "war", 2, "Army1==Army2 Size", lambda row: int(row[1]) == 100 and int(row[3]) == int(row[2]))
+        #draw_plot(1, 0, "simulate", 1, "Generations", lambda row: int(row[2]) == 1 and int(row[3]) == 1)
+        #draw_plot(1, 1, "simulate", 3, "Scenario", lambda row: int(row[1]) == 10 and int(row[2]) == 1)
+        #draw_scatter(1, 2, "simulate", 2, "World Size", lambda row: int(row[1]) == 1 and int(row[3]) == 1)
 
         plt.tight_layout()
         plt.legend(loc='lower center', bbox_to_anchor=(-1.5, -1.5))

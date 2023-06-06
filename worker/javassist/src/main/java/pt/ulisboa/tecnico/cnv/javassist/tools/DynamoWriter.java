@@ -14,14 +14,13 @@ import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.services.dynamodbv2.util.TableUtils;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsyncClientBuilder;
 
-
 public class DynamoWriter implements Runnable {
 
     private final Logger LOGGER = Logger.getLogger(DynamoWriter.class.getName());
 
     private final String AWS_REGION = System.getenv("AWS_DEFAULT_REGION");
     private final String DYNAMO_DB_TABLE_NAME = System.getenv("DYNAMO_DB_TABLE_NAME");
- 
+
     private final AmazonDynamoDB dynamoDB;
 
     private final ScheduledExecutorService scheduler;
@@ -42,8 +41,11 @@ public class DynamoWriter implements Runnable {
     public void run() {
         Optional<List<WriteRequest>> requests;
         synchronized (workQueue) {
-            if (workQueue.isEmpty())
+            LOGGER.info("Running scheduled DynamoDB write");
+            if (workQueue.isEmpty()) {
+                LOGGER.info("No metrics to write");
                 return;
+            }
             requests = Optional.of(this.workQueue.stream().map(m -> {
                 Map<String, AttributeValue> item = new HashMap<>();
                 item.put("RequestParams", new AttributeValue().withS(m.getLeft()));
@@ -53,12 +55,16 @@ public class DynamoWriter implements Runnable {
             }).collect(Collectors.toList()));
             workQueue.clear();
         }
-        requests.ifPresent(writeRequests -> dynamoDB.batchWriteItem(new BatchWriteItemRequest().addRequestItemsEntry(DYNAMO_DB_TABLE_NAME, writeRequests)));
+        requests.ifPresent(writeRequests -> {
+            LOGGER.info("Writing " + writeRequests.size() + " metric(s) to DynamoDB");
+            dynamoDB.batchWriteItem(new BatchWriteItemRequest().addRequestItemsEntry(DYNAMO_DB_TABLE_NAME, writeRequests));
+        });
     }
 
     public boolean queueMetric(Metrics.Pair<String, Metrics.Statistics> m) {
         synchronized (workQueue) {
-           return workQueue.add(m);
+            LOGGER.info("Queuing request metric of " + m.getLeft() + " for DynamoDB write");
+            return workQueue.add(m);
         }
     }
 
@@ -71,9 +77,11 @@ public class DynamoWriter implements Runnable {
         // Create a table with a primary hash key named 'name', which holds a string
         CreateTableRequest createTableRequest = new CreateTableRequest()
                 .withTableName(DYNAMO_DB_TABLE_NAME)
-                .withAttributeDefinitions(new AttributeDefinition().withAttributeName("RequestParams").withAttributeType("S"))
+                .withAttributeDefinitions(
+                        new AttributeDefinition().withAttributeName("RequestParams").withAttributeType("S"))
                 .withKeySchema(new KeySchemaElement().withAttributeName("RequestParams").withKeyType("HASH"))
-                .withProvisionedThroughput(new ProvisionedThroughput().withReadCapacityUnits(1L).withWriteCapacityUnits(1L))
+                .withProvisionedThroughput(
+                        new ProvisionedThroughput().withReadCapacityUnits(1L).withWriteCapacityUnits(1L))
                 .withTableClass("STANDARD");
 
         // Create table if it does not exist yet
@@ -82,7 +90,7 @@ public class DynamoWriter implements Runnable {
         try {
             // wait for the table to move into ACTIVE state
             TableUtils.waitUntilActive(dynamoDB, DYNAMO_DB_TABLE_NAME);
-        } catch(InterruptedException e) {
+        } catch (InterruptedException e) {
             LOGGER.info(e.getMessage());
         }
     }
