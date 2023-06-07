@@ -33,6 +33,13 @@ import com.amazonaws.services.ec2.model.Filter;
 import com.amazonaws.services.ec2.model.RunInstancesRequest;
 import com.amazonaws.services.ec2.model.RunInstancesResult;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
+import com.amazonaws.services.lambda.AWSLambda;
+import com.amazonaws.services.lambda.AWSLambdaClientBuilder;
+import com.amazonaws.services.lambda.model.InvokeRequest;
+import com.amazonaws.services.lambda.model.InvokeResult;
+import com.amazonaws.services.lambda.model.ServiceException;
+
+import java.nio.charset.StandardCharsets;
 
 import pt.ulisboa.tecnico.cnv.middleware.Utils.Pair;
 
@@ -208,25 +215,33 @@ public class AWSInterface {
         return results;
     }
 
-    public static void callLambda() {
+    public String callLambda(String functionName, String json) {
+
+
+        InvokeRequest invokeRequest = new InvokeRequest()
+                .withFunctionName(functionName)
+                .withPayload(json);
+
+        InvokeResult invokeResult = null;
 
         try {
-            String functionName = "worker-lambda";
-            LambdaClient awsLambda = LambdaClient.builder().credentialsProvider(EnvironmentVariableCredentialsProvider.create()).build();
+            AWSLambda awsLambda = AWSLambdaClientBuilder.standard()
+                    .withCredentials(new EnvironmentVariableCredentialsProvider())
+                    .build();
 
-            String json = "{\"number\":\"10\"}";
-            SdkBytes payload = SdkBytes.fromUtf8String(json) ;
+            invokeResult = awsLambda.invoke(invokeRequest);
 
-            InvokeRequest request = InvokeRequest.builder().functionName(functionName).payload(payload).build();
+            LOGGER.info("Lambda response status: " + invokeResult.getStatusCode());
 
-            InvokeResponse res = awsLambda.invoke(request);
-            String value = res.payload().asUtf8String() ;
-            System.out.println(value);
+            String ans = new String(invokeResult.getPayload().array(), StandardCharsets.UTF_8);
 
-            awsLambda.close();
+            //write out the return value
+            LOGGER.info("Lambda Content: " + ans);
+            return ans;
 
-        } catch(LambdaException e) {
+        } catch (ServiceException e) {
             LOGGER.info(e.getMessage());
+            return null;
         }
     }
 

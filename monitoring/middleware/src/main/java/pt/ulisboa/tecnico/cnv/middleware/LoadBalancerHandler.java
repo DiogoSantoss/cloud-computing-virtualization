@@ -89,11 +89,19 @@ public class LoadBalancerHandler implements HttpHandler {
             Optional<Instance> optInstance = getNextInstance();
     
             if (optInstance.isEmpty()) {
+
+                //Maybe launch new instance or call lambda function
+
                 LOGGER.info("No instances available to handle request.");
                 t.sendResponseHeaders(500, 0);
                 t.close();
                 return;
             }
+
+            //Call lambda - example
+            //String json = "{\"max\": \"10\", \"army1\": \"100\", \"army2\": \"100\"}"
+            //awsInterface.callLambda("insect-war-lambda", json);
+            //"foxes-rabbits-lambda" or "insect-war-lambda" or "compression-lambda"
 
             Instance instance = optInstance.get();
     
