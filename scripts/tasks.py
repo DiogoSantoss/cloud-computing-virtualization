@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import csv
 import numpy as np
 import base64
+from scipy.optimize import curve_fit
 
 def sendRequest(endpoint, *args, image_files=[]):
 
@@ -33,7 +34,7 @@ def sendAllRequests():
 
     # range [min, max]
     war_args = [
-        [1, 100, 10],  # max,
+        [1, 100, 1],  # max,
         [1, 50, 10],  # army1,
         [1, 50, 10]  # army2
     ]
@@ -191,6 +192,15 @@ if __name__ == "__main__":
             slope, intercept = arr
             equation = "y={:.3e}+exp({:.3e}x)".format(intercept,slope)
             print(arr)
+
+            def exponential_2(x, a, b, c):
+                return a * (x**(b*2)) + c
+            
+            popt, pcov = curve_fit(exponential_2, x, instructions)
+            print(popt)
+            #print(pcov)
+            equation = "y={:.5e}*(x**({:.5e}*2))+{:.5e}".format(popt[0],popt[1], popt[2])
+
             plot.set_title(equation)
             #plot.set_title(compute_slope_equation(x, instructions))
             plot.set_xlabel(x_label)
@@ -220,9 +230,13 @@ if __name__ == "__main__":
         SIZE = (3, 3)
 
         # for requests in line 72
-        draw_plot(0, 0, "war", 1, "Iterations", lambda row: int(row[2]) == 100 and int(row[3]) == 100)
-        draw_plot(0, 1, "war", 1, "Iterations", lambda row: int(row[2]) == 50 and int(row[3]) == 50)
-        draw_plot(0, 2, "war", 1, "Iterations", lambda row: int(row[2]) == 200 and int(row[3]) == 200)
+        #draw_scatter(0, 0, "war", 1, "Iterations", lambda row: int(row[2]) == 100 and int(row[3]) == 100)
+        #draw_scatter(0, 1, "war", 1, "Iterations", lambda row: int(row[2]) == 50 and int(row[3]) == 50)
+        #draw_scatter(0, 2, "war", 1, "Iterations", lambda row: int(row[2]) == 200 and int(row[3]) == 200)
+
+        draw_plot(0, 0, "war", 1, "Iterations", lambda row: int(row[2]) == 11 and int(row[3]) == 41)
+        draw_plot(1, 0, "war", 1, "Iterations", lambda row: int(row[2]) == 41 and int(row[3]) == 41)
+        draw_plot(2, 0, "war", 1, "Iterations", lambda row: int(row[2]) == 11 and int(row[3]) == 11)
 
         #draw_plot(0, 0, "war", 1, "Iterations", lambda row: int(row[2]) == 100 and int(row[3]) == 100)
         #draw_plot(0, 1, "war", 3, "Army1 Size", lambda row: int(row[1]) == 1 and int(row[2]) == 1)
