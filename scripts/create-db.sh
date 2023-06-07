@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 
 # Only source script if hostname is not chord (vasco)
-[[ $(hostname) -ne "chord" ]] && source my_config.sh
-
+[ "$(hostname)" != "chord" ] && source my_config.sh
 # Delete table if already exists
 ./delete-db.sh
 
