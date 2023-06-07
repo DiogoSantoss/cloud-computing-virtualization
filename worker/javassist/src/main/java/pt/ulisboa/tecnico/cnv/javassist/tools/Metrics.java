@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.PrintWriter;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javassist.CannotCompileException;
@@ -208,7 +207,10 @@ public class Metrics extends AbstractJavassistTool {
         CtBehavior behavior = block.behavior;
 
         if (!behavior.getDeclaringClass().getSimpleName().equals("Metrics$Pair")
-                && !behavior.getDeclaringClass().getSimpleName().equals("Metrics$Statistics")) {
+                && !behavior.getDeclaringClass().getSimpleName().equals("Metrics$Statistics")
+                && !behavior.getName().equals("filter")
+                && !behavior.getName().equals("doFilter")
+                && !behavior.getDeclaringClass().getSimpleName().equals("Filter$Chain")) {
 
             block.behavior.insertAt(block.line,
                     String.format("%s.increaseBasicBlockCount(%s);", Metrics.class.getName(), block.getLength()));

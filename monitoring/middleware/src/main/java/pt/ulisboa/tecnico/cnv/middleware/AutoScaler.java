@@ -35,7 +35,7 @@ public class AutoScaler implements Runnable {
      * Decide whether to scale up or down based on the average CPU utilization and 
      * average load of all instances.
      */
-    public void scale() {
+    private void scale() {
 
         System.out.println("--------------------");
 

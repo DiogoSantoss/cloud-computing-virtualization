@@ -2,13 +2,12 @@ package pt.ulisboa.tecnico.cnv.webserver;
 
 import java.net.InetSocketAddress;
 import com.sun.net.httpserver.HttpServer;
-import java.util.Scanner;
+//import java.util.Scanner;
 
 import pt.ulisboa.tecnico.cnv.foxesrabbits.SimulationHandler;
 import pt.ulisboa.tecnico.cnv.compression.CompressImageHandlerImpl;
 import pt.ulisboa.tecnico.cnv.insectwar.WarSimulationHandler;
-import pt.ulisboa.tecnico.cnv.javassist.tools.DynamoWriter;
-import pt.ulisboa.tecnico.cnv.javassist.tools.Metrics;
+//import pt.ulisboa.tecnico.cnv.javassist.tools.Metrics;
 
 public class WebServer {
 
@@ -18,20 +17,21 @@ public class WebServer {
         server.createContext("/simulate", new SimulationHandler());
         server.createContext("/compressimage", new CompressImageHandlerImpl());
         server.createContext("/insectwar", new WarSimulationHandler());
+        server.createContext("/test", new HealthCheckHandler());
         server.start();
 
-        Scanner scanner = new Scanner(System.in);
+        //Scanner scanner = new Scanner(System.in);
 
-        while (true) {
-            String input = scanner.nextLine();
-            switch (input) {
-                case "see":
-                    Metrics.printStatistics();
-                    break;
-                case "metrics":
-                    Metrics.writeStatisticsToCsv();
-                    break;
-            }
-        }
+        // while (true) {
+        //     String input = scanner.nextLine();
+        //     switch (input) {
+        //         case "see":
+        //             Metrics.printStatistics();
+        //             break;
+        //         case "metrics":
+        //             Metrics.writeStatisticsToCsv();
+        //             break;
+        //     }
+        // }
     }
 }

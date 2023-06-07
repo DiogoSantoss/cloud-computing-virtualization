@@ -6,9 +6,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Logger;
 
@@ -22,23 +20,20 @@ public class LoadBalancerHandler implements HttpHandler {
 
     private AWSInterface awsInterface;
 
-    private Map<String, List<Request>> requests;
-
     private DynamoDownloader downloader;
 
     public LoadBalancerHandler(AWSInterface awsInterface) {
         super();
         this.awsInterface = awsInterface;
         this.downloader = new DynamoDownloader();
-        this.requests = new HashMap<>();
     }
 
     /*
      * Round Robin algorithm to select the next instance to forward the request to.
      */
-    public Optional<Instance> getNextInstance() {
+    public Optional<InstanceInfo> getNextInstance() {
 
-        List<Instance> instances = new ArrayList<>(this.awsInterface.getAliveInstances());
+        List<InstanceInfo> instances = new ArrayList<>(this.awsInterface.getAliveInstances());
 
         if (instances.size() == 0)
             return Optional.empty();
@@ -54,7 +49,7 @@ public class LoadBalancerHandler implements HttpHandler {
      */
     public Optional<Instance> getLowestLoadedInstance() {
 
-        List<Instance> instances = new ArrayList<Instance>(this.awsInterface.getAliveInstances());
+        List<InstanceInfo> instances = new ArrayList<InstanceInfo>(this.awsInterface.getAliveInstances());
 
         if (instances.size() == 0)
             return Optional.empty();
@@ -62,21 +57,18 @@ public class LoadBalancerHandler implements HttpHandler {
         int min = Integer.MAX_VALUE;
         Instance minInstance = null;
 
-        for (Instance instance: instances) {
-            if (requests.containsKey(instance.getInstanceId())) {
-                int size = requests.get(instance.getInstanceId()).size();
-                if (size < min) {
-                    min = size;
-                    minInstance = instance;
-                }
-            } else {
-                // TODO: How to keep requests and getAliveInstances in sync?
-                requests.put(instance.getInstanceId(), new ArrayList<Request>());
-                return Optional.of(instance);
+        for (InstanceInfo instance: instances) {
+            int size = instance.getRequests().size();
+            if (size < min) {
+                min = size;
+                minInstance = instance.getInstance();
             }
         }
 
-        return Optional.of(minInstance);
+        if (minInstance == null)
+            return Optional.empty();
+        else 
+            return Optional.of(minInstance);
     }
 
     @Override
@@ -86,7 +78,7 @@ public class LoadBalancerHandler implements HttpHandler {
 
             LOGGER.info("Received request: " + t.getRequestURI().toString());
     
-            Optional<Instance> optInstance = getNextInstance();
+            Optional<InstanceInfo> optInstance = getNextInstance();
     
             if (optInstance.isEmpty()) {
 
@@ -99,22 +91,21 @@ public class LoadBalancerHandler implements HttpHandler {
             }
 
             //Call lambda - example
-            //String json = "{\"max\": \"10\", \"army1\": \"100\", \"army2\": \"100\"}"
+            //String json = "{\"max\": \"10\", \"army1\": \"100\", \"army2\": \"100\"}";
             //awsInterface.callLambda("insect-war-lambda", json);
             //"foxes-rabbits-lambda" or "insect-war-lambda" or "compression-lambda"
 
-            Instance instance = optInstance.get();
+            InstanceInfo instance = optInstance.get();
     
             Request request = new Request(t.getRequestURI().toString());
 
-            this.requests.putIfAbsent(instance.getInstanceId(), new ArrayList<Request>());
-            this.requests.get(instance.getInstanceId()).add(request);
+            instance.getRequests().add(request);
     
-            LOGGER.info("Forwarding request to instance: " + instance.getInstanceId());
+            LOGGER.info("Forwarding request to instance: " + instance.getInstance().getInstanceId());
     
             HttpURLConnection con = sendRequestToWorker(instance, request, t);
             
-            this.requests.get(instance.getInstanceId()).remove(request);
+            instance.getRequests().remove(request);
 
             replyToClient(con, t);
 
@@ -123,11 +114,10 @@ public class LoadBalancerHandler implements HttpHandler {
             e.printStackTrace();
             throw new RuntimeException(e);
         }
-
     }
 
-    private HttpURLConnection sendRequestToWorker(Instance instance, Request request, HttpExchange t) throws IOException {
-        URL url = new URL("http://" + instance.getPublicDnsName() + ":8000" + request.getURI());
+    private HttpURLConnection sendRequestToWorker(InstanceInfo instance, Request request, HttpExchange t) throws IOException {
+        URL url = new URL("http://" + instance.getInstance().getPublicDnsName() + ":8000" + request.getURI());
         HttpURLConnection con = (HttpURLConnection) url.openConnection();
         con.setRequestMethod(t.getRequestMethod());
         return con;

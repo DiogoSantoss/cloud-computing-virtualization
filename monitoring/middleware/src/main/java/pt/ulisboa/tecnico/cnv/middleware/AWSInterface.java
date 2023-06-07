@@ -2,12 +2,14 @@ package pt.ulisboa.tecnico.cnv.middleware;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
@@ -63,8 +65,13 @@ public class AWSInterface {
     private AmazonDynamoDB dynamoDB;
     private String tableName = "Statistics";
 
-    private Set<Instance> aliveInstances = new HashSet<Instance>();
+    private Set<InstanceInfo> aliveInstances = new HashSet<InstanceInfo>();
     private AtomicInteger idx = new AtomicInteger(0);
+
+    private Set<InstanceInfo> suspectedInstances = new HashSet<InstanceInfo>();
+
+    // maybe for lambda calls
+    //private Set<InstanceInfo> pendingInstances = new HashSet<InstanceInfo>();
 
     public AWSInterface() {
         this.ec2 = AmazonEC2ClientBuilder.standard().withRegion(AWS_REGION)
@@ -80,8 +87,28 @@ public class AWSInterface {
         LOGGER.info("Alive instances: " + this.aliveInstances.size());
     }
 
-    public Set<Instance> getAliveInstances() {
+    public Set<InstanceInfo> getAliveInstances() {
         return this.aliveInstances;
+    }
+
+    public void addAliveInstance(InstanceInfo instance) {
+        this.aliveInstances.add(instance);
+    }
+
+    public void removeAliveInstance(InstanceInfo instance) {
+        this.aliveInstances.remove(instance);
+    }
+
+    public Set<InstanceInfo> getSuspectedInstances() {
+        return this.suspectedInstances;
+    }
+
+    public void addSuspectedInstance(InstanceInfo instance) {
+        this.suspectedInstances.add(instance);
+    }
+
+    public void removeSuspectedInstance(InstanceInfo instance) {
+        this.suspectedInstances.remove(instance);
     }
 
     public int updateAndGetIdx() {
@@ -133,7 +160,10 @@ public class AWSInterface {
             }
         }
 
-        this.aliveInstances.addAll(newInstances);
+        List<InstanceInfo> newInstancesInfo = newInstances.stream().map(i -> new InstanceInfo(i))
+                .collect(Collectors.toList());
+
+        this.aliveInstances.addAll(newInstancesInfo);
 
         LOGGER.info("Total instances: " + this.aliveInstances.size());
 
@@ -147,7 +177,7 @@ public class AWSInterface {
         // TODO: Should terminate lowest CPU utilization instance
 
         // Remove from aliveInstances to prevent new requests
-        Instance instance = this.aliveInstances.iterator().next();
+        InstanceInfo instance = this.aliveInstances.iterator().next();
         if (instance == null)
             throw new RuntimeException("No instances to terminate");
         this.aliveInstances.remove(instance);
@@ -155,7 +185,7 @@ public class AWSInterface {
         // TODO: Wait for instance to terminate requests
 
         TerminateInstancesRequest termInstanceReq = new TerminateInstancesRequest();
-        termInstanceReq.withInstanceIds(instance.getInstanceId());
+        termInstanceReq.withInstanceIds(instance.getInstance().getInstanceId());
         this.ec2.terminateInstances(termInstanceReq);
 
     }
@@ -168,13 +198,13 @@ public class AWSInterface {
         return instances;
     }
 
-    public Set<Instance> queryAliveInstances() {
+    public Set<InstanceInfo> queryAliveInstances() {
 
-        Set<Instance> instances = new HashSet<Instance>();
+        Set<InstanceInfo> instances = new HashSet<InstanceInfo>();
         for (Reservation reservation : this.ec2.describeInstances().getReservations()) {
             for (Instance instance : reservation.getInstances()) {
                 if (instance.getState().getName().equals("running") && instance.getImageId().equals(AMI_ID)) {
-                    instances.add(instance);
+                    instances.add(new InstanceInfo(instance));
                 }
             }
         }
@@ -189,8 +219,8 @@ public class AWSInterface {
 
         List<Pair<String, Double>> results = new ArrayList<Pair<String, Double>>();
 
-        for (Instance instance : this.aliveInstances) {
-            String iid = instance.getInstanceId();
+        for (InstanceInfo instance : this.aliveInstances) {
+            String iid = instance.getInstance().getInstanceId();
 
             instanceDimension.setValue(iid);
             GetMetricStatisticsRequest request = new GetMetricStatisticsRequest()
@@ -217,7 +247,6 @@ public class AWSInterface {
 
     public String callLambda(String functionName, String json) {
 
-
         InvokeRequest invokeRequest = new InvokeRequest()
                 .withFunctionName(functionName)
                 .withPayload(json);
@@ -235,7 +264,7 @@ public class AWSInterface {
 
             String ans = new String(invokeResult.getPayload().array(), StandardCharsets.UTF_8);
 
-            //write out the return value
+            // write out the return value
             LOGGER.info("Lambda Content: " + ans);
             return ans;
 
@@ -264,7 +293,7 @@ public class AWSInterface {
         try {
             // wait for the table to move into ACTIVE state
             TableUtils.waitUntilActive(dynamoDB, tableName);
-        } catch(InterruptedException e) {
+        } catch (InterruptedException e) {
             LOGGER.info(e.getMessage());
         }
     }
