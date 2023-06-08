@@ -5,7 +5,7 @@ import java.util.List;
 
 public class Request {
 
-    private enum Endpoint {
+    public enum Endpoint {
 
         COMPRESSION("compressImage"),
         SIMULATION("simulate"),
@@ -26,6 +26,7 @@ public class Request {
     private String originalURI;
     private Endpoint endpoint;
     private List<String> arguments;
+    private double estimatedCost;
 
     /*
      * Receive a URI (e.g. /compression?arg1=val1&arg2=val2&arg3=val3) 
@@ -59,8 +60,20 @@ public class Request {
         this.arguments = arguments;
     }
 
+    public Endpoint getEndpoint() {
+        return this.endpoint;
+    }
+
+    public List<String> getArguments() {
+        return this.arguments;
+    }
+
     public String getURI() {
         return this.toString();
+    }
+
+    public void setEstimatedCost(double cost) {
+        this.estimatedCost = cost;
     }
 
     @Override

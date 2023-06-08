@@ -166,7 +166,8 @@ if __name__ == "__main__":
         
         def compute_slope_equation(x, instructions):
             slope, intercept = np.polyfit(x, instructions, 1)
-            equation = "y={:.3e}x+{:.3e}".format(slope, intercept)
+            equation = "y={:.8e}x+{:.8e}".format(slope, intercept)
+            print("{:.8e}".format(slope))
             return equation
 
         def draw_plot(x_grid, y_grid, endpoint, x_idx, x_label, condition):
