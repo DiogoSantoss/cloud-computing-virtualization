@@ -64,6 +64,10 @@ public class Metrics extends AbstractJavassistTool {
         super(packageNameList, writeDestination);
     }
 
+    public static Thread startWriter() {
+        return new Thread(uploader);
+    }
+
     public static Map<String, Statistics> getRequestToStatistics() {
         return requestToStatistics;
     }

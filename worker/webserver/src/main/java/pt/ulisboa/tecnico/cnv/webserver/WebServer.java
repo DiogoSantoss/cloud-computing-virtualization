@@ -20,6 +20,9 @@ public class WebServer {
         server.createContext("/test", new HealthCheckHandler());
         server.start();
 
+        Thread runner = Metrics.startWriter();
+        runner.start();
+
         Scanner scanner = new Scanner(System.in);
 
         while (true) {
