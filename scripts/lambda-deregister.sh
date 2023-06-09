@@ -7,9 +7,9 @@ source my_config.sh
 
 # TODO: acho que podemos só martelar isto com role de root
 
-aws lambda delete-function --function-name insect-war-lambda
-aws lambda delete-function --function-name foxes-rabbits-lambda
-aws lambda delete-function --function-name compression-lambda
+aws lambda delete-function --function-name insectwar-lambda
+aws lambda delete-function --function-name simulate-lambda
+aws lambda delete-function --function-name compressImage-lambda
 
 aws iam detach-role-policy \
 	--role-name lambda-role \

@@ -76,6 +76,31 @@ public class Request {
         this.estimatedCost = cost;
     }
 
+    public String getLambdaName() {
+        return this.endpoint.toString() + "-lambda";
+        
+    }
+
+    public String getLambdaRequest(){
+        
+        switch (this.endpoint.toString()) {
+            case "compressImage":
+                return String.format("{\"body\": \"%s\", \"targetFormat\": \"%s\", \"compressionFactor\": \"%s\"}", 
+                    this.arguments.get(0), this.arguments.get(1), this.arguments.get(2));
+            
+            case "insectwar":
+                return String.format("{\"max\": \"%s\", \"army1\": \"%s\", \"army2\": \"%s\"}", 
+                    this.arguments.get(0), this.arguments.get(1), this.arguments.get(2));
+            
+            case "simulate":
+                return String.format("{\"generations\": \"%s\", \"world\": \"%s\", \"scenario\": \"%s\"}", 
+                    this.arguments.get(0), this.arguments.get(1), this.arguments.get(2));
+            
+            default:
+                return "";
+        }  
+    }
+
     @Override
     public String toString() {
         return this.originalURI;

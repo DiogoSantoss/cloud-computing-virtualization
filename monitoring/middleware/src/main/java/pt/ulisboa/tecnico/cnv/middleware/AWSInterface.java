@@ -40,6 +40,7 @@ import com.amazonaws.services.lambda.AWSLambdaClientBuilder;
 import com.amazonaws.services.lambda.model.InvokeRequest;
 import com.amazonaws.services.lambda.model.InvokeResult;
 import com.amazonaws.services.lambda.model.ServiceException;
+import com.amazonaws.regions.Regions;
 
 import java.nio.charset.StandardCharsets;
 
@@ -256,6 +257,7 @@ public class AWSInterface {
         try {
             AWSLambda awsLambda = AWSLambdaClientBuilder.standard()
                     .withCredentials(new EnvironmentVariableCredentialsProvider())
+                    .withRegion(Regions.US_EAST_1)
                     .build();
 
             invokeResult = awsLambda.invoke(invokeRequest);

@@ -28,6 +28,7 @@ public class LoadBalancerHandler implements HttpHandler {
         super();
         this.awsInterface = awsInterface;
         this.downloader = new DynamoDownloader();
+        //this.estimator = new Estimator();
     }
 
     /*
@@ -73,11 +74,6 @@ public class LoadBalancerHandler implements HttpHandler {
             return Optional.of(minInstance);
     }
 
-    //Call lambda - example
-    //String json = "{\"max\": \"10\", \"army1\": \"100\", \"army2\": \"100\"}";
-    //awsInterface.callLambda("insect-war-lambda", json);
-    //"foxes-rabbits-lambda" or "insect-war-lambda" or "compression-lambda"
-
     @Override
     public void handle(HttpExchange t) {
 
@@ -86,27 +82,35 @@ public class LoadBalancerHandler implements HttpHandler {
             LOGGER.info("Received request: " + t.getRequestURI().toString());
     
             Request request = new Request(t.getRequestURI().toString());
-            this.estimator.estimate(request);
+            //this.estimator.estimate(request);
 
-            Optional<InstanceInfo> optInstance = getNextInstance();
-            if (optInstance.isEmpty()) {
-                //Maybe launch new instance or call lambda function
-                LOGGER.info("No instances available to handle request.");
-                t.sendResponseHeaders(500, 0);
-                t.close();
-                return;
-            }
-            InstanceInfo instance = optInstance.get();
-    
-            instance.getRequests().add(request);
-    
-            LOGGER.info("Forwarding request to instance: " + instance.getInstance().getInstanceId());
-    
-            HttpURLConnection con = sendRequestToWorker(instance, request, t);
-            
-            instance.getRequests().remove(request);
+            //Call lambda - example
+            String response = awsInterface.callLambda(request.getLambdaName(), request.getLambdaRequest());
 
-            replyToClient(con, t);
+            t.sendResponseHeaders(200, response.length());
+            t.getResponseBody().write(response.getBytes());
+            t.close();
+
+
+            //Optional<InstanceInfo> optInstance = getNextInstance();
+            //if (optInstance.isEmpty()) {
+            //    //Maybe launch new instance or call lambda function
+            //    LOGGER.info("No instances available to handle request.");
+            //    t.sendResponseHeaders(500, 0);
+            //    t.close();
+            //    return;
+            //}
+            //InstanceInfo instance = optInstance.get();
+    
+            //instance.getRequests().add(request);
+    
+            //LOGGER.info("Forwarding request to instance: " + instance.getInstance().getInstanceId());
+    
+            //HttpURLConnection con = sendRequestToWorker(instance, request, t);
+            //
+            //instance.getRequests().remove(request);
+
+            //replyToClient(con, t);
 
         } catch (Exception e) {
             LOGGER.info("Error: " + e.getMessage());
