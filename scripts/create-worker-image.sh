@@ -38,10 +38,10 @@ cmd="sudo yum update -y; sudo yum install java-11-amazon-corretto.x86_64 -y;"
 ssh -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEYPAR_PATH ec2-user@$(cat instance.dns) $cmd
 
 # Copy worker jar
-scp -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEYPAR_PATH ../worker/webserver/target/webserver-1.0.0-SNAPSHOT-jar-with-dependencies.jar ec2-user@$(cat instance.dns):
+scp -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEYPAR_PATH ../worker/webserver/build/libs/webserver.jar ec2-user@$(cat instance.dns):
 
 # Setup web server to start on instance launch.
-cmd="echo \"java -cp /home/ec2-user/webserver-1.0.0-SNAPSHOT-jar-with-dependencies.jar -javaagent:/home/ec2-user/webserver-1.0.0-SNAPSHOT-jar-with-dependencies.jar=Metrics:pt.ulisboa.tecnico.cnv:output pt.ulisboa.tecnico.cnv.webserver.WebServer\" | sudo tee -a /etc/rc.local; sudo chmod +x /etc/rc.local"
+cmd="echo \"java -cp /home/ec2-user/webserver.jar -javaagent:/home/ec2-user/webserver.jar=Metrics:pt.ulisboa.tecnico.cnv:output pt.ulisboa.tecnico.cnv.webserver.WebServer\" | sudo tee -a /etc/rc.local; sudo chmod +x /etc/rc.local"
 ssh -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEYPAR_PATH ec2-user@$(cat instance.dns) $cmd
 
 # Step 3: test VM instance.

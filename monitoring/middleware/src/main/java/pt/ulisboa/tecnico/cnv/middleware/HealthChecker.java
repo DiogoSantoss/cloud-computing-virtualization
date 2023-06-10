@@ -12,7 +12,7 @@ public class HealthChecker implements Runnable {
 
     private static final Logger LOGGER = Logger.getLogger(HealthChecker.class.getName());
 
-    private static final int TIMER = 1000;
+    private static final int TIMER = 10000;
 
     private AWSInterface awsInterface;
 

@@ -58,15 +58,15 @@ public class Metrics extends AbstractJavassistTool {
     private static Map<String, Statistics> requestToStatistics = new ConcurrentHashMap<>();
 
     // Let's hope only one instance is created
-    private static final DynamoWriter uploader = new DynamoWriter();
+    //private static final DynamoWriter uploader = new DynamoWriter();
 
     public Metrics(List<String> packageNameList, String writeDestination) {
         super(packageNameList, writeDestination);
     }
 
-    public static Thread startWriter() {
-        return new Thread(uploader);
-    }
+    //public static Thread startWriter() {
+        //return new Thread(uploader);
+    //}
 
     public static Map<String, Statistics> getRequestToStatistics() {
         return requestToStatistics;
@@ -110,9 +110,9 @@ public class Metrics extends AbstractJavassistTool {
         Statistics s = requestToStatistics.putIfAbsent(request, statistics);
         
         // New request (no previous mapping)
-        if (s  == null) {
-            uploader.queueMetric(pair);
-        }
+        //if (s  == null) {
+        //    uploader.queueMetric(pair);
+        //}
 
         // Clear mapping
         threadIdToRequestAndStatistics.remove(threadId);

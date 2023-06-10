@@ -72,6 +72,10 @@ public class Request {
         return this.toString();
     }
 
+    public double getEstimatedCost() {
+        return this.estimatedCost;
+    }
+
     public void setEstimatedCost(double cost) {
         this.estimatedCost = cost;
     }

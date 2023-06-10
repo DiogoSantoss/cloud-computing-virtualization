@@ -21,17 +21,3 @@ echo "Waiting until table is available"
 aws dynamodb wait table-exists \
   --region $AWS_DEFAULT_REGION \
   --table-name $DYNAMO_DB_TABLE_NAME
-
-# echo "Testing Writing to the Table"
-# aws dynamodb put-item \
-#     --region $AWS_DEFAULT_REGION \
-#     --table-name $DYNAMO_DB_TABLE_NAME  \
-#     --item \
-#         '{"RequestParams": {"S": "random_request"}, "BasicBlockCount": {"N": "10"}, "InstCount": {"N": "11"}}'
-# 
-# echo "Testing Reading from the Table"
-# aws dynamodb get-item \
-#   --region $AWS_DEFAULT_REGION \
-#   --table-name $DYNAMO_DB_TABLE_NAME \
-#   --key '{"RequestParams": {"S": "random_request"}}'
-

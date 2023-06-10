@@ -63,16 +63,16 @@ public class DynamoDownloader {
         }
     }
 
-    public Optional<Statistics> getFromCache(String request) {
+    public Optional<Statistics> getFromCache(Request request) {
         synchronized (this) {
-            Statistics item = cacheItems.get(request);
+            Statistics item = cacheItems.get(request.getURI());
             return item == null ? Optional.empty() : Optional.of(item);
         }
     }
 
-    public Optional<Statistics> getFromStatistics(String request) {
+    public Optional<Statistics> getFromStatistics(Request request) {
         Map<String, AttributeValue> query = new HashMap<>();
-        query.put("RequestParams", new AttributeValue().withS(request));
+        query.put("RequestParams", new AttributeValue().withS(request.getURI()));
         GetItemResult queryResult = dynamoDB.getItem(new GetItemRequest().withTableName(DYNAMO_DB_TABLE_NAME).withKey(query));
 
         Map<String, AttributeValue> item = queryResult.getItem();

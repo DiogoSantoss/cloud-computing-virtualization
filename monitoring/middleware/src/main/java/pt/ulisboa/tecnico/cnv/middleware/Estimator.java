@@ -20,6 +20,11 @@ public class Estimator {
         this.simulationWorld2 = 41612.3819;
         this.simulationWorld3 = 157492.947;
         this.simulationWorld4 = 157492.947;
+
+        // Precomputed weights for the insect wars
+        this.insectWarWeights.add(0, 0.5);
+        this.insectWarWeights.add(1, 0.3);
+        this.insectWarWeights.add(2, 0.2);
     }
 
     public double estimate(Request request) {
@@ -55,13 +60,11 @@ public class Estimator {
                 LOGGER.info("Failed to estimate: Invalid world number");
                 estimatedCost = 0;
         }
-
-        request.setEstimatedCost(estimatedCost);
         return estimatedCost;
     }
 
     private double estimateInsectWars(Request request) {
-        
+
         double estimatedCost = 0;
 
         // insectwar?max=10&army1=100&army2=100
@@ -74,7 +77,6 @@ public class Estimator {
         int armyAvg = (army1 + army2) / 2;
 
         estimatedCost = armyDiff * this.insectWarWeights.get(0) + armyAvg * this.insectWarWeights.get(1) + max * this.insectWarWeights.get(2);
-        request.setEstimatedCost(estimatedCost);
         return estimatedCost;
     }
 

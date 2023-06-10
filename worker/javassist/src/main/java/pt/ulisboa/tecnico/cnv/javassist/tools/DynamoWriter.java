@@ -3,9 +3,6 @@ package pt.ulisboa.tecnico.cnv.javassist.tools;
 import com.amazonaws.services.dynamodbv2.model.*;
 
 import java.util.*;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -30,11 +27,10 @@ public class DynamoWriter implements Runnable {
     public DynamoWriter() {
         if (AWS_REGION == null || DYNAMO_DB_TABLE_NAME == null)
             throw new RuntimeException("AWS_REGION or DYNAMO_DB_TABLE_NAME not set");
+
         this.dynamoDB = AmazonDynamoDBAsyncClientBuilder.standard().withRegion(AWS_REGION)
                 .withCredentials(new EnvironmentVariableCredentialsProvider()).build();
         this.createTable();
-        // this.scheduler = Executors.newScheduledThreadPool(1);
-        // this.scheduler.scheduleAtFixedRate(this, 0, 10, TimeUnit.SECONDS);
     }
 
     @Override

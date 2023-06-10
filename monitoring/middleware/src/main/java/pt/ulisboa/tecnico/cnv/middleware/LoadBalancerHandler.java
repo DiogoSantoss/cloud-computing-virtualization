@@ -50,21 +50,21 @@ public class LoadBalancerHandler implements HttpHandler {
      * The load is temporarily defined as the number of requests to that instance.
      * NOTE: Ideally, this would still use round robin between equally loaded instances.
      */
-    public Optional<Instance> getLowestLoadedInstance() {
+    public Optional<InstanceInfo> getLowestLoadedInstance(Request request) {
 
         List<InstanceInfo> instances = new ArrayList<InstanceInfo>(this.awsInterface.getAliveInstances());
 
         if (instances.size() == 0)
             return Optional.empty();
 
-        int min = Integer.MAX_VALUE;
-        Instance minInstance = null;
+        double min = Double.MAX_VALUE;
+        InstanceInfo minInstance = null;
 
         for (InstanceInfo instance: instances) {
-            int size = instance.getRequests().size();
+            double size = instance.getRequests().stream().mapToDouble(r -> r.getEstimatedCost()).sum();
             if (size < min) {
                 min = size;
-                minInstance = instance.getInstance();
+                minInstance = instance;
             }
         }
 
@@ -82,35 +82,53 @@ public class LoadBalancerHandler implements HttpHandler {
             LOGGER.info("Received request: " + t.getRequestURI().toString());
     
             Request request = new Request(t.getRequestURI().toString());
-            //this.estimator.estimate(request);
+
+            // Get request (estimated or real) cost
+            Optional<Statistics> cachedStatistics = this.downloader.getFromCache(request);
+            if (cachedStatistics.isPresent()) {
+                request.setEstimatedCost(cachedStatistics.get().getInstructionCount());
+                LOGGER.info("Cache hit for " + request.getURI() + " with cost " + request.getEstimatedCost());
+            } else {
+                double estimate = this.estimator.estimate(request);
+                request.setEstimatedCost(estimate);
+                LOGGER.info("Cache miss for " + request.getURI() + " with (estimated) cost " + request.getEstimatedCost());
+
+                // In the background fetch the statistics from DynamoDB
+                Optional<Statistics> realCost = this.downloader.getFromStatistics(request);
+                if (realCost.isPresent()) {
+                    request.setEstimatedCost(realCost.get().getInstructionCount());
+                    LOGGER.info("Fetch real cost for " + request.getURI() + " with cost " + request.getEstimatedCost());
+                } else {
+                    LOGGER.info("Failed to fetch real cost for " + request.getURI());
+                }
+            }
 
             //Call lambda - example
-            String response = awsInterface.callLambda(request.getLambdaName(), request.getLambdaRequest());
+            // String response = awsInterface.callLambda(request.getLambdaName(), request.getLambdaRequest());
 
-            t.sendResponseHeaders(200, response.length());
-            t.getResponseBody().write(response.getBytes());
-            t.close();
+            // t.sendResponseHeaders(200, response.length());
+            // t.getResponseBody().write(response.getBytes());
+            // t.close();
 
-
-            //Optional<InstanceInfo> optInstance = getNextInstance();
-            //if (optInstance.isEmpty()) {
-            //    //Maybe launch new instance or call lambda function
-            //    LOGGER.info("No instances available to handle request.");
-            //    t.sendResponseHeaders(500, 0);
-            //    t.close();
-            //    return;
-            //}
-            //InstanceInfo instance = optInstance.get();
+            Optional<InstanceInfo> optInstance = this.getLowestLoadedInstance(request);
+            if (optInstance.isEmpty()) {
+               //Maybe launch new instance or call lambda function
+               LOGGER.info("No instances available to handle request.");
+               t.sendResponseHeaders(500, 0);
+               t.close();
+               return;
+            }
+            InstanceInfo instance = optInstance.get();
     
-            //instance.getRequests().add(request);
+            instance.getRequests().add(request);
     
-            //LOGGER.info("Forwarding request to instance: " + instance.getInstance().getInstanceId());
+            LOGGER.info("Forwarding request to instance: " + instance.getInstance().getInstanceId());
     
-            //HttpURLConnection con = sendRequestToWorker(instance, request, t);
-            //
-            //instance.getRequests().remove(request);
+            HttpURLConnection con = sendRequestToWorker(instance, request, t);
+            
+            instance.getRequests().remove(request);
 
-            //replyToClient(con, t);
+            replyToClient(con, t);
 
         } catch (Exception e) {
             LOGGER.info("Error: " + e.getMessage());
