@@ -2,6 +2,7 @@ package pt.ulisboa.tecnico.cnv.javassist.tools;
 
 import java.io.File;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -56,17 +57,11 @@ public class Metrics extends AbstractJavassistTool {
 
     private static Map<Long, Pair<String, Statistics>> threadIdToRequestAndStatistics = new ConcurrentHashMap<>();
     private static Map<String, Statistics> requestToStatistics = new ConcurrentHashMap<>();
-
-    // Let's hope only one instance is created
-    //private static final DynamoWriter uploader = new DynamoWriter();
+    public static List<Pair<String, Statistics>> dynamoQueue = new ArrayList<>();
 
     public Metrics(List<String> packageNameList, String writeDestination) {
         super(packageNameList, writeDestination);
     }
-
-    //public static Thread startWriter() {
-        //return new Thread(uploader);
-    //}
 
     public static Map<String, Statistics> getRequestToStatistics() {
         return requestToStatistics;
@@ -109,10 +104,12 @@ public class Metrics extends AbstractJavassistTool {
         // Assume equal requests have equal statistics
         Statistics s = requestToStatistics.putIfAbsent(request, statistics);
         
-        // New request (no previous mapping)
-        //if (s  == null) {
-        //    uploader.queueMetric(pair);
-        //}
+        //New request (no previous mapping)
+        if (s  == null) {
+            synchronized(dynamoQueue) {
+                dynamoQueue.add(pair);
+            }
+        }
 
         // Clear mapping
         threadIdToRequestAndStatistics.remove(threadId);

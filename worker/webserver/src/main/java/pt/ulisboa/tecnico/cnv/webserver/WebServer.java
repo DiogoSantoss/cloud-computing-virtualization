@@ -20,21 +20,22 @@ public class WebServer {
         server.createContext("/test", new HealthCheckHandler());
         server.start();
 
-        //Thread runner = Metrics.startWriter();
-        //runner.start();
+        DynamoWriter dynamoWriter = new DynamoWriter();
+        Thread dynamoWriterThread = new Thread(dynamoWriter);
+        dynamoWriterThread.start();
 
-        // Scanner scanner = new Scanner(System.in);
+        Scanner scanner = new Scanner(System.in);
 
-        // while (true) {
-        //     String input = scanner.nextLine();
-        //     switch (input) {
-        //         case "see":
-        //             Metrics.printStatistics();
-        //             break;
-        //         case "metrics":
-        //             Metrics.writeStatisticsToCsv();
-        //             break;
-        //     }
-        // }
+        while (true) {
+            String input = scanner.nextLine();
+            switch (input) {
+                case "see":
+                    Metrics.printStatistics();
+                    break;
+                case "metrics":
+                    Metrics.writeStatisticsToCsv();
+                    break;
+            }
+        }
     }
 }

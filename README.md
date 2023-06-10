@@ -22,17 +22,17 @@ mvn clean install
 ./run.sh
 
 cd monitoring/webserver
-../gradlew build
-../gradlew run
+./gradlew build
+./run.sh
 ```
 
 ## Deployment
 ```bash
 cd worker
-mvn clean install
+./gradlew build
 
 cd monitoring/webserver
-../gradlew build
+./gradlew build
 
 cd scripts
 ./launch-all.sh

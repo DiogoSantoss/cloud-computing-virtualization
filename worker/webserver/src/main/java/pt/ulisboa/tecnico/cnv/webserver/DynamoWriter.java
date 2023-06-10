@@ -1,4 +1,4 @@
-package pt.ulisboa.tecnico.cnv.javassist.tools;
+package pt.ulisboa.tecnico.cnv.webserver;
 
 import com.amazonaws.services.dynamodbv2.model.*;
 
@@ -8,7 +8,12 @@ import java.util.stream.Collectors;
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
+import com.amazonaws.partitions.model.Region;
+import com.amazonaws.regions.Regions;
 import com.amazonaws.services.dynamodbv2.util.TableUtils;
+
+import pt.ulisboa.tecnico.cnv.javassist.tools.Metrics;
+
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsyncClientBuilder;
 
 public class DynamoWriter implements Runnable {
@@ -19,8 +24,6 @@ public class DynamoWriter implements Runnable {
     private final String DYNAMO_DB_TABLE_NAME = System.getenv("DYNAMO_DB_TABLE_NAME");
 
     private final AmazonDynamoDB dynamoDB;
-
-    // private final ScheduledExecutorService scheduler;
 
     private final List<Metrics.Pair<String, Metrics.Statistics>> workQueue = new ArrayList<>();
 
@@ -42,22 +45,28 @@ public class DynamoWriter implements Runnable {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            Optional<List<PutItemRequest>> requests;
-            synchronized (workQueue) {
-                LOGGER.info("Running scheduled DynamoDB write");
-                if (workQueue.isEmpty()) {
-                    LOGGER.info("No metrics to write");
-                    continue;
-                }
-                requests = Optional.of(this.workQueue.stream().map(m -> {
-                    Map<String, AttributeValue> item = new HashMap<>();
-                    item.put("RequestParams", new AttributeValue().withS(m.getLeft()));
-                    item.put("InstructionCount", new AttributeValue().withN(Long.toString(m.getRight().getInstCount())));
-                    item.put("BasicBlockCount", new AttributeValue().withN(Long.toString(m.getRight().getBasicBlockCount())));
-                    return new PutItemRequest().withItem(item).withTableName(DYNAMO_DB_TABLE_NAME);
-                }).collect(Collectors.toList()));
-                workQueue.clear();
+            
+            synchronized(Metrics.dynamoQueue) {
+                workQueue.addAll(Metrics.dynamoQueue);
+                Metrics.dynamoQueue.clear();
             }
+
+            // TODO: Only submit metrics in batches of 25
+            
+            LOGGER.info("Running scheduled DynamoDB write");
+            if (workQueue.isEmpty()) {
+                LOGGER.info("No metrics to write");
+                continue;
+            }
+
+            Optional<List<PutItemRequest>> requests = Optional.of(this.workQueue.stream().map(m -> {
+                Map<String, AttributeValue> item = new HashMap<>();
+                item.put("RequestParams", new AttributeValue().withS(m.getLeft()));
+                item.put("InstructionCount", new AttributeValue().withN(Long.toString(m.getRight().getInstCount())));
+                item.put("BasicBlockCount", new AttributeValue().withN(Long.toString(m.getRight().getBasicBlockCount())));
+                return new PutItemRequest().withItem(item).withTableName(DYNAMO_DB_TABLE_NAME);
+            }).collect(Collectors.toList()));
+            workQueue.clear();
 
             requests.ifPresent(w -> {
                 w.forEach(r -> {
@@ -68,13 +77,6 @@ public class DynamoWriter implements Runnable {
             });
 
             LOGGER.info("Exited dynamo write");
-        }
-    }
-
-    public boolean queueMetric(Metrics.Pair<String, Metrics.Statistics> m) {
-        synchronized (workQueue) {
-            LOGGER.info("Queuing request metric of " + m.getLeft() + " for DynamoDB write");
-            return workQueue.add(m);
         }
     }
 
