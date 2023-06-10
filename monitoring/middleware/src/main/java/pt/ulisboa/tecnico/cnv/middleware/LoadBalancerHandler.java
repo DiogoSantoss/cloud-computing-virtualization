@@ -10,9 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.logging.Logger;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import com.sun.net.httpserver.HttpHandler;
-import com.amazonaws.services.ec2.model.Instance;
 import com.sun.net.httpserver.HttpExchange;
 
 public class LoadBalancerHandler implements HttpHandler {
@@ -86,10 +84,13 @@ public class LoadBalancerHandler implements HttpHandler {
     public void handle(HttpExchange t) {
 
         try {
+
+            System.out.println("here");
             // Handling CORS
             t.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
 
             if (t.getRequestMethod().equalsIgnoreCase("OPTIONS")) {
+                System.out.println("options");
                 t.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, OPTIONS");
                 t.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type,Authorization");
                 t.sendResponseHeaders(204, -1);

@@ -61,6 +61,7 @@ public class HealthChecker implements Runnable {
                         if (this.awsInterface.getSuspectedInstances().contains(instance)) {
                             LOGGER.info("Instance " + instance.getInstance().getInstanceId() + " became alive.");
                             this.awsInterface.removeSuspectedInstance(instance);
+                            this.awsInterface.addAliveInstance(instance);
                             instance.resetMissedHealthChecks();
                         } else {
                             LOGGER.info("Instance " + instance.getInstance().getInstanceId() + " is still alive.");

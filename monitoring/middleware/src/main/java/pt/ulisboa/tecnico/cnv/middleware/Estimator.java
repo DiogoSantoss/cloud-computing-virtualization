@@ -1,5 +1,6 @@
 package pt.ulisboa.tecnico.cnv.middleware;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -22,6 +23,7 @@ public class Estimator {
         this.simulationWorld4 = 157492.947;
 
         // Precomputed weights for the insect wars
+        this.insectWarWeights = new ArrayList<Double>();
         this.insectWarWeights.add(0, 0.5);
         this.insectWarWeights.add(1, 0.3);
         this.insectWarWeights.add(2, 0.2);
