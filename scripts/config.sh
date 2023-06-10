@@ -4,6 +4,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 export PATH=<path to aws installation>:$PATH
 export AWS_DEFAULT_REGION=<aws region, e.g. us-east-1>
+export AWS_REGION=$AWS_DEFAULT_REGION
 export AWS_ACCOUNT_ID=<insert here your aws account id>
 export AWS_ACCESS_KEY_ID=<insert here your aws access key>
 export AWS_SECRET_ACCESS_KEY=<insert here your aws secret access key>
