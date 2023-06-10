@@ -207,11 +207,12 @@ public class Metrics extends AbstractJavassistTool {
 
         CtBehavior behavior = block.behavior;
 
+        List<String> methodsToIgnore = new ArrayList<>();
+        methodsToIgnore.addAll(List.of("filter","build","create","initialize","getRegionMetadata","getRegion","getRegionObject","withRegion"));
+
         if (!behavior.getDeclaringClass().getSimpleName().equals("Metrics$Pair")
                 && !behavior.getDeclaringClass().getSimpleName().equals("Metrics$Statistics")
-                && !behavior.getName().equals("filter")
-                && !behavior.getName().equals("doFilter")
-                && !behavior.getDeclaringClass().getSimpleName().equals("Filter$Chain")) {
+                && !methodsToIgnore.contains(behavior.getName())) {
 
             block.behavior.insertAt(block.line,
                     String.format("%s.increaseBasicBlockCount(%s);", Metrics.class.getName(), block.getLength()));

@@ -6,6 +6,7 @@ import numpy as np
 import base64
 from scipy.optimize import curve_fit
 
+
 def sendRequest(endpoint, *args, image_files=[]):
 
     if len(image_files) > 0:
@@ -51,7 +52,7 @@ def sendAllRequests():
     #         i)
     #     print(war_endpoint)
     #     requests.get(war_endpoint)
-    
+
     # for i in range(war_args[0][0], war_args[0][1], war_args[0][2]):  # max
     #     war_endpoint = "http://localhost:8000/insectwar?max={}&army1=50&army2=50".format(
     #         i)
@@ -65,7 +66,7 @@ def sendAllRequests():
     #     requests.get(war_endpoint)
 
     # for i in range(war_args[0][0], war_args[0][1], war_args[0][2]):  # max
-    #     for j in range(war_args[1][0], war_args[1][1], war_args[1][2]):  # army1    
+    #     for j in range(war_args[1][0], war_args[1][1], war_args[1][2]):  # army1
     #         for k in range(war_args[2][0], war_args[2][1], war_args[2][2]):  # army2
     #             war_endpoint = "http://localhost:8000/insectwar?max={}&army1={}&army2={}".format(
     #                 i, j, k)
@@ -110,40 +111,43 @@ def sendAllRequests():
     #         k)
     #     requests.get(simulate_endpoint)
 
-    for i in range(simulate_args[0][0], simulate_args[0][1], simulate_args[0][2]): # generations
-        for k in range(simulate_args[2][0], simulate_args[2][1], simulate_args[2][2]):  # scenario    
-            for j in range(simulate_args[1][0], simulate_args[1][1], simulate_args[1][2]): # world
-                simulate_endpoint = "http://localhost:8000/simulate?generations={}&world={}&scenario={}".format(i, j, k)
-                print(simulate_endpoint)
-                requests.get(simulate_endpoint)
-   
+    # for i in range(simulate_args[0][0], simulate_args[0][1], simulate_args[0][2]): # generations
+    #     for k in range(simulate_args[2][0], simulate_args[2][1], simulate_args[2][2]):  # scenario
+    #         for j in range(simulate_args[1][0], simulate_args[1][1], simulate_args[1][2]): # world
+    #             simulate_endpoint = "http://localhost:8000/simulate?generations={}&world={}&scenario={}".format(i, j, k)
+    #             print(simulate_endpoint)
+    #             requests.get(simulate_endpoint)
 
 
 def sendImages():
 
     compression_args = [
         [
-            "meme.png",
-            "meme1.jpg",
-            "meme2.jpg",
+            "1024x768.bmp", "1920x1280.bmp", 
+            "1024x768_2.bmp", "640x426.bmp", 
+            "1280x853.bmp", "640x480.bmp",
+
+            "651x502.png","1024x1024.png",
+            "1200x1098.png","1600x1124.png",
+            "3500x1142.png",
+
+            "800x400.jpeg","1024x768.jpeg",
+            "1320x880.jpeg","1642x1094.jpeg",
+            "2048x1536.jpeg",
         ],
         [0, 10, 2]
     ]
 
     for k in range(compression_args[1][0], compression_args[1][1], compression_args[1][2]):  # compressionFactor
-        with open("meme.png", "rb") as image:
-            payload = "targetFormat:{};compressionFactor:{};data:image/{};base64,{}".format(
-                "png", k*0.1, "png", base64.b64encode(image.read()).decode("utf-8")  
-            )
-            requests.post("http://localhost:8000/compressimage", data=payload)
-
-
-    for img in compression_args[0]:  # images
-        with open(img, "rb") as image:
-            payload = "targetFormat:{};compressionFactor:{};data:image/{};base64,{}".format(
-                img.split(".")[1], "0.5", img.split(".")[1], base64.b64encode(image.read()).decode("utf-8")  
-            )
-            requests.post("http://localhost:8000/compressimage", data=payload)
+        for img in compression_args[0]:  # images
+            dir = "images/"+img
+            with open(dir, "rb") as image:
+                payload = "targetFormat:{};compressionFactor:{};data:image/{};base64,{}".format(
+                    img.split(".")[1], 
+                    k*0.1, img.split(".")[1], 
+                    base64.b64encode(image.read()).decode("utf-8")
+                )
+                requests.post("http://localhost:8000/compressimage", data=payload)
 
 
 if __name__ == "__main__":
@@ -163,7 +167,7 @@ if __name__ == "__main__":
         print("Completed")
 
     if args.analyse:
-        
+
         def compute_slope_equation(x, instructions):
             slope, intercept = np.polyfit(x, instructions, 1)
             equation = "y={:.8e}x+{:.8e}".format(slope, intercept)
@@ -186,20 +190,20 @@ if __name__ == "__main__":
                             instructions.append(int(row[5]))
 
             # the line below are about exponential stuff
-            #arr = np.polyfit(x, np.log(instructions),1, w=np.sqrt(instructions))
-            #slope, intercept = arr
-            #equation = "y={:.3e}+exp({:.3e}x)".format(intercept,slope)
-            #print(arr)
+            # arr = np.polyfit(x, np.log(instructions),1, w=np.sqrt(instructions))
+            # slope, intercept = arr
+            # equation = "y={:.3e}+exp({:.3e}x)".format(intercept,slope)
+            # print(arr)
 
-            #def exponential_2(x, a, b, c):
+            # def exponential_2(x, a, b, c):
             #    return a * (x**(b*2)) + c
-            
-            #popt, pcov = curve_fit(exponential_2, x, instructions)
-            #print(popt)
-            #print(pcov)
-            #equation = "y={:.5e}*(x**({:.5e}*2))+{:.5e}".format(popt[0],popt[1], popt[2])
 
-            #plot.set_title(equation)
+            # popt, pcov = curve_fit(exponential_2, x, instructions)
+            # print(popt)
+            # print(pcov)
+            # equation = "y={:.5e}*(x**({:.5e}*2))+{:.5e}".format(popt[0],popt[1], popt[2])
+
+            # plot.set_title(equation)
             plot.set_title(compute_slope_equation(x, instructions))
             plot.set_xlabel(x_label)
             plot.plot(x, basicBlocks, label='Basic Blocks')
@@ -216,7 +220,11 @@ if __name__ == "__main__":
                 for row in rows:
                     if row[0] == endpoint:
                         if condition(row):
-                            x.append(int(row[x_idx]))
+                            if endpoint == "compress":
+                                h,w = row[1].split("x")
+                                x.append(int(h)*int(w))
+                            else:
+                                x.append(int(row[x_idx]))
                             basicBlocks.append(int(row[4]))
                             instructions.append(int(row[5]))
 
@@ -227,42 +235,78 @@ if __name__ == "__main__":
 
         SIZE = (3, 4)
 
-        # Multiple generations for all scenarios of world 1
-        draw_plot(0,0,"simulate", 1, "Generations", lambda row: int(row[2]) == 1 and int(row[3]) == 1)
-        draw_plot(1,0,"simulate", 1, "Generations", lambda row: int(row[2]) == 1 and int(row[3]) == 2)
-        draw_plot(2,0,"simulate", 1, "Generations", lambda row: int(row[2]) == 1 and int(row[3]) == 3)
+        # # Multiple generations for all scenarios of world 1
+        # draw_plot(0, 0, "simulate", 1, "Generations",
+        #           lambda row: int(row[2]) == 1 and int(row[3]) == 1)
+        # draw_plot(1, 0, "simulate", 1, "Generations",
+        #           lambda row: int(row[2]) == 1 and int(row[3]) == 2)
+        # draw_plot(2, 0, "simulate", 1, "Generations",
+        #           lambda row: int(row[2]) == 1 and int(row[3]) == 3)
 
-        # Multiple generations for all scenarios of world 2
-        draw_plot(0,1,"simulate", 1, "Generations", lambda row: int(row[2]) == 2 and int(row[3]) == 1)
-        draw_plot(1,1,"simulate", 1, "Generations", lambda row: int(row[2]) == 2 and int(row[3]) == 2)
-        draw_plot(2,1,"simulate", 1, "Generations", lambda row: int(row[2]) == 2 and int(row[3]) == 3)
+        # # Multiple generations for all scenarios of world 2
+        # draw_plot(0, 1, "simulate", 1, "Generations",
+        #           lambda row: int(row[2]) == 2 and int(row[3]) == 1)
+        # draw_plot(1, 1, "simulate", 1, "Generations",
+        #           lambda row: int(row[2]) == 2 and int(row[3]) == 2)
+        # draw_plot(2, 1, "simulate", 1, "Generations",
+        #           lambda row: int(row[2]) == 2 and int(row[3]) == 3)
 
-        # Multiple generations for all scenarios of world 3
-        draw_plot(0,2,"simulate", 1, "Generations", lambda row: int(row[2]) == 3 and int(row[3]) == 1)
-        draw_plot(1,2,"simulate", 1, "Generations", lambda row: int(row[2]) == 3 and int(row[3]) == 2)
-        draw_plot(2,2,"simulate", 1, "Generations", lambda row: int(row[2]) == 3 and int(row[3]) == 3)
+        # # Multiple generations for all scenarios of world 3
+        # draw_plot(0, 2, "simulate", 1, "Generations",
+        #           lambda row: int(row[2]) == 3 and int(row[3]) == 1)
+        # draw_plot(1, 2, "simulate", 1, "Generations",
+        #           lambda row: int(row[2]) == 3 and int(row[3]) == 2)
+        # draw_plot(2, 2, "simulate", 1, "Generations",
+        #           lambda row: int(row[2]) == 3 and int(row[3]) == 3)
 
-        # Multiple generations for all scenarios of world 4
-        draw_plot(0,3,"simulate", 1, "Generations", lambda row: int(row[2]) == 3 and int(row[3]) == 1)
-        draw_plot(1,3,"simulate", 1, "Generations", lambda row: int(row[2]) == 3 and int(row[3]) == 2)
-        draw_plot(2,3,"simulate", 1, "Generations", lambda row: int(row[2]) == 3 and int(row[3]) == 3)
+        # # Multiple generations for all scenarios of world 4
+        # draw_plot(0, 3, "simulate", 1, "Generations",
+        #           lambda row: int(row[2]) == 3 and int(row[3]) == 1)
+        # draw_plot(1, 3, "simulate", 1, "Generations",
+        #           lambda row: int(row[2]) == 3 and int(row[3]) == 2)
+        # draw_plot(2, 3, "simulate", 1, "Generations",
+        #           lambda row: int(row[2]) == 3 and int(row[3]) == 3)
 
+        # Multiple images, multiple compressions, PNG
+
+        # Multiple images, multiple compressions, BMP
+        # draw_scatter(0,0,"compress", 1, "Pixeis", lambda row: row[2] == "bmp" and float(row[3]) == 0.0)
+        # draw_scatter(0,1,"compress", 1, "Pixeis", lambda row: row[2] == "bmp" and float(row[3]) == 0.2)
+        # draw_scatter(0,2,"compress", 1, "Pixeis", lambda row: row[2] == "bmp" and float(row[3]) == 0.4)
+        # draw_scatter(1,0,"compress", 1, "Pixeis", lambda row: row[2] == "bmp" and float(row[3]) == 0.6)
+        # draw_scatter(1,1,"compress", 1, "Pixeis", lambda row: row[2] == "bmp" and float(row[3]) == 0.8)
+
+        # Multiple images, multiple compressions, PNG
+        # draw_scatter(0,0,"compress", 1, "Pixeis", lambda row: row[2] == "png" and float(row[3]) == 0.0)
+        # draw_scatter(0,1,"compress", 1, "Pixeis", lambda row: row[2] == "png" and float(row[3]) == 0.2)
+        # draw_scatter(0,2,"compress", 1, "Pixeis", lambda row: row[2] == "png" and float(row[3]) == 0.4)
+        # draw_scatter(1,0,"compress", 1, "Pixeis", lambda row: row[2] == "png" and float(row[3]) == 0.6)
+        # draw_scatter(1,1,"compress", 1, "Pixeis", lambda row: row[2] == "png" and float(row[3]) == 0.8)
+
+        # Multiple images, multiple compressions, JPEG
+        draw_scatter(0,0,"compress", 1, "Pixeis", lambda row: row[2] == "jpeg" and float(row[3]) == 0.0)
+        draw_scatter(0,1,"compress", 1, "Pixeis", lambda row: row[2] == "jpeg" and float(row[3]) == 0.2)
+        draw_scatter(0,2,"compress", 1, "Pixeis", lambda row: row[2] == "jpeg" and float(row[3]) == 0.4)
+        draw_scatter(1,0,"compress", 1, "Pixeis", lambda row: row[2] == "jpeg" and float(row[3]) == 0.6)
+        draw_scatter(1,1,"compress", 1, "Pixeis", lambda row: row[2] == "jpeg" and float(row[3]) == 0.8)
+        
+        
         # for requests in line 72
-        #draw_scatter(0, 0, "war", 1, "Iterations", lambda row: int(row[2]) == 100 and int(row[3]) == 100)
-        #draw_scatter(0, 1, "war", 1, "Iterations", lambda row: int(row[2]) == 50 and int(row[3]) == 50)
-        #draw_scatter(0, 2, "war", 1, "Iterations", lambda row: int(row[2]) == 200 and int(row[3]) == 200)
+        # draw_scatter(0, 0, "war", 1, "Iterations", lambda row: int(row[2]) == 100 and int(row[3]) == 100)
+        # draw_scatter(0, 1, "war", 1, "Iterations", lambda row: int(row[2]) == 50 and int(row[3]) == 50)
+        # draw_scatter(0, 2, "war", 1, "Iterations", lambda row: int(row[2]) == 200 and int(row[3]) == 200)
 
-        #draw_plot(0, 0, "war", 1, "Iterations", lambda row: int(row[2]) == 11 and int(row[3]) == 41)
-        #draw_plot(1, 0, "war", 1, "Iterations", lambda row: int(row[2]) == 41 and int(row[3]) == 41)
-        #draw_plot(2, 0, "war", 1, "Iterations", lambda row: int(row[2]) == 11 and int(row[3]) == 11)
+        # draw_plot(0, 0, "war", 1, "Iterations", lambda row: int(row[2]) == 11 and int(row[3]) == 41)
+        # draw_plot(1, 0, "war", 1, "Iterations", lambda row: int(row[2]) == 41 and int(row[3]) == 41)
+        # draw_plot(2, 0, "war", 1, "Iterations", lambda row: int(row[2]) == 11 and int(row[3]) == 11)
 
-        #draw_plot(0, 0, "war", 1, "Iterations", lambda row: int(row[2]) == 100 and int(row[3]) == 100)
-        #draw_plot(0, 1, "war", 3, "Army1 Size", lambda row: int(row[1]) == 1 and int(row[2]) == 1)
-        #draw_plot(0, 2, "war", 2, "Army2 Size", lambda row: int(row[1]) == 1 and int(row[3]) == 1)
-        #draw_plot(0, 2, "war", 2, "Army1==Army2 Size", lambda row: int(row[1]) == 100 and int(row[3]) == int(row[2]))
-        #draw_plot(1, 0, "simulate", 1, "Generations", lambda row: int(row[2]) == 1 and int(row[3]) == 1)
-        #draw_plot(1, 1, "simulate", 3, "Scenario", lambda row: int(row[1]) == 10 and int(row[2]) == 1)
-        #draw_scatter(1, 2, "simulate", 2, "World Size", lambda row: int(row[1]) == 1 and int(row[3]) == 1)
+        # draw_plot(0, 0, "war", 1, "Iterations", lambda row: int(row[2]) == 100 and int(row[3]) == 100)
+        # draw_plot(0, 1, "war", 3, "Army1 Size", lambda row: int(row[1]) == 1 and int(row[2]) == 1)
+        # draw_plot(0, 2, "war", 2, "Army2 Size", lambda row: int(row[1]) == 1 and int(row[3]) == 1)
+        # draw_plot(0, 2, "war", 2, "Army1==Army2 Size", lambda row: int(row[1]) == 100 and int(row[3]) == int(row[2]))
+        # draw_plot(1, 0, "simulate", 1, "Generations", lambda row: int(row[2]) == 1 and int(row[3]) == 1)
+        # draw_plot(1, 1, "simulate", 3, "Scenario", lambda row: int(row[1]) == 10 and int(row[2]) == 1)
+        # draw_scatter(1, 2, "simulate", 2, "World Size", lambda row: int(row[1]) == 1 and int(row[3]) == 1)
 
         plt.tight_layout()
         plt.legend(loc='lower center', bbox_to_anchor=(-1.5, -1.5))
