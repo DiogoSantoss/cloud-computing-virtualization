@@ -33,14 +33,15 @@ public class LoadBalancerHandler implements HttpHandler {
         super();
         this.awsInterface = awsInterface;
         this.downloader = new DynamoDownloader();
-        //this.estimator = new Estimator();
+        this.estimator = new Estimator();
         this.currentLambdaRequests = new AtomicInteger(0);
     }
 
     /*
      * Round Robin algorithm to select the next instance to forward the request to.
+     * Currently not used.
      */
-    /* public Optional<InstanceInfo> getNextInstance() {
+    public Optional<InstanceInfo> getNextInstance() {
 
         List<InstanceInfo> instances = new ArrayList<>(this.awsInterface.getAliveInstances());
 
@@ -49,12 +50,13 @@ public class LoadBalancerHandler implements HttpHandler {
 
         int idx = this.awsInterface.updateAndGetIdx();
         return Optional.of(instances.get(idx));
-    } */
+    } 
 
     /*
      * Select the instance with the lowest load to forward the request to.
      * The load is temporarily defined as the number of requests to that instance.
-     * NOTE: Ideally, this would still use round robin between equally loaded instances.
+     * NOTE: Ideally, this would still use round robin between equally loaded
+     * instances.
      */
     public Optional<InstanceInfo> getLowestLoadedInstance(Request request) {
 
@@ -66,7 +68,7 @@ public class LoadBalancerHandler implements HttpHandler {
         double min = Double.MAX_VALUE;
         InstanceInfo minInstance = null;
 
-        for (InstanceInfo instance: instances) {
+        for (InstanceInfo instance : instances) {
             double size = instance.getRequests().stream().mapToDouble(r -> r.getEstimatedCost()).sum();
             if (size < min) {
                 min = size;
@@ -76,7 +78,7 @@ public class LoadBalancerHandler implements HttpHandler {
 
         if (minInstance == null)
             return Optional.empty();
-        else 
+        else
             return Optional.of(minInstance);
     }
 
@@ -84,12 +86,22 @@ public class LoadBalancerHandler implements HttpHandler {
     public void handle(HttpExchange t) {
 
         try {
+            // Handling CORS
+            t.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+
+            if (t.getRequestMethod().equalsIgnoreCase("OPTIONS")) {
+                t.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, OPTIONS");
+                t.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type,Authorization");
+                t.sendResponseHeaders(204, -1);
+                return;
+            }
+
             LOGGER.info("Received request: " + t.getRequestURI().toString());
-            
+
             Request request = new Request(t.getRequestURI().toString());
             
             // Get request (estimated or real) cost
-            //this.estimateResquestCost(request);
+            this.estimateRequestCost(request);
 
             Optional<InstanceInfo> optInstance = this.getLowestLoadedInstance(request);
             if (optInstance.isEmpty()) {
@@ -142,14 +154,11 @@ public class LoadBalancerHandler implements HttpHandler {
         } catch (Exception e) {
             LOGGER.info("Error: " + e.getMessage());
             e.printStackTrace();
-            throw new RuntimeException(e);
         }
     }
 
     private void estimateRequestCost(Request request) {
-        // Get request (estimated or real) cost
-    
-        double estimate = -1.0;
+        double estimate;
         Optional<Statistics> cachedStatistics = this.downloader.getFromCache(request);
 
         if (cachedStatistics.isPresent()) {
@@ -194,7 +203,6 @@ public class LoadBalancerHandler implements HttpHandler {
             }
             rd.close();
 
-            //LOGGER.info("Response: " + response.toString() + " size: " + response.length());
             t.sendResponseHeaders(200, response.length());
             t.getResponseBody().write(response.toString().getBytes());
             t.close();
