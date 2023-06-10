@@ -32,7 +32,11 @@ public class DynamoDownloader {
     public DynamoDownloader() {
         if (AWS_REGION == null || DYNAMO_DB_TABLE_NAME == null)
             throw new RuntimeException("AWS_REGION or DYNAMO_DB_TABLE_NAME not set");
-        this.dynamoDB = AmazonDynamoDBAsyncClientBuilder.standard().withRegion(AWS_REGION).withCredentials(new EnvironmentVariableCredentialsProvider()).build();
+        this.dynamoDB = AmazonDynamoDBAsyncClientBuilder.standard()
+            .withRegion(AWS_REGION)
+            .withCredentials(new EnvironmentVariableCredentialsProvider())
+            .build();
+
         this.createTable();
     }
 
@@ -50,7 +54,18 @@ public class DynamoDownloader {
 
     public void createTable() {
         // Create a table with a primary hash key named 'name', which holds a string
-        CreateTableRequest createTableRequest = new CreateTableRequest().withTableName(DYNAMO_DB_TABLE_NAME).withAttributeDefinitions(new AttributeDefinition().withAttributeName("RequestParams").withAttributeType("S")).withKeySchema(new KeySchemaElement().withAttributeName("RequestParams").withKeyType("HASH")).withProvisionedThroughput(new ProvisionedThroughput().withReadCapacityUnits(1L).withWriteCapacityUnits(1L)).withTableClass("STANDARD");
+        CreateTableRequest createTableRequest = new CreateTableRequest()
+            .withTableName(DYNAMO_DB_TABLE_NAME)
+            .withAttributeDefinitions(new AttributeDefinition()
+                .withAttributeName("RequestParams")
+                .withAttributeType("S"))
+                .withKeySchema(new KeySchemaElement()
+                    .withAttributeName("RequestParams")
+                    .withKeyType("HASH"))
+                .withProvisionedThroughput(new ProvisionedThroughput()
+                    .withReadCapacityUnits(1L)
+                    .withWriteCapacityUnits(1L))
+                .withTableClass("STANDARD");
 
         // Create table if it does not exist yet
         TableUtils.createTableIfNotExists(dynamoDB, createTableRequest);
@@ -73,7 +88,10 @@ public class DynamoDownloader {
     public Optional<Statistics> getFromStatistics(Request request) {
         Map<String, AttributeValue> query = new HashMap<>();
         query.put("RequestParams", new AttributeValue().withS(request.getURI()));
-        GetItemResult queryResult = dynamoDB.getItem(new GetItemRequest().withTableName(DYNAMO_DB_TABLE_NAME).withKey(query));
+
+        GetItemResult queryResult = dynamoDB.getItem(new GetItemRequest()
+            .withTableName(DYNAMO_DB_TABLE_NAME)
+            .withKey(query));
 
         Map<String, AttributeValue> item = queryResult.getItem();
         if (queryResult.getItem() == null) {

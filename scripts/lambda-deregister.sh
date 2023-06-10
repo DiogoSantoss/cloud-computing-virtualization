@@ -1,11 +1,7 @@
 #!/usr/bin/env bash
 
 # Only source script if hostname is not chord (vasco)
-#[ "$(hostname)" != "chord" ] && source my_config.sh
-
-source my_config.sh
-
-# TODO: acho que podemos só martelar isto com role de root
+[ "$(hostname)" != "chord" ] && source my_config.sh
 
 aws lambda delete-function --function-name insectwar-lambda
 aws lambda delete-function --function-name simulate-lambda

@@ -257,7 +257,7 @@ public class AWSInterface {
         try {
             AWSLambda awsLambda = AWSLambdaClientBuilder.standard()
                     .withCredentials(new EnvironmentVariableCredentialsProvider())
-                    .withRegion(Regions.US_EAST_1)
+                    .withRegion(AWS_REGION)
                     .build();
 
             invokeResult = awsLambda.invoke(invokeRequest);

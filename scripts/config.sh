@@ -12,3 +12,4 @@ export AWS_EC2_SSH_KEYPAR_PATH=<path to aws ssh keypair>
 export AWS_SECURITY_GROUP=<name of your security group>
 export AWS_KEYPAIR_NAME=<name of your aws keypair>
 export DYNAMO_DB_TABLE_NAME=<name of your dynamo db table>
+export AWS_AMI_ID=<id of the ami create with create-worker-image.sh>
