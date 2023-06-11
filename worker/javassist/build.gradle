@@ -11,13 +11,6 @@ repositories {
 }
 
 dependencies {
-    implementation platform('com.amazonaws:aws-java-sdk-bom:1.12.472')
-    implementation 'com.amazonaws:aws-java-sdk-lambda'
-    implementation 'com.amazonaws:aws-java-sdk-ec2'
-    implementation 'com.amazonaws:aws-java-sdk-cloudwatch'
-    implementation 'com.amazonaws:aws-java-sdk-dynamodb'
-    implementation 'com.amazonaws:aws-java-sdk-iam'
-    implementation 'com.amazonaws:aws-java-sdk-sts'
     implementation 'org.javassist:javassist:3.28.0-GA'
 }
 

@@ -91,7 +91,6 @@ public class LoadBalancerHandler implements HttpHandler {
             t.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
 
             if (t.getRequestMethod().equalsIgnoreCase("OPTIONS")) {
-                System.out.println("options");
                 t.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, OPTIONS");
                 t.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type,Authorization");
                 t.sendResponseHeaders(204, -1);

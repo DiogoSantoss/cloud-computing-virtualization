@@ -8,8 +8,6 @@ import java.util.stream.Collectors;
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
-import com.amazonaws.partitions.model.Region;
-import com.amazonaws.regions.Regions;
 import com.amazonaws.services.dynamodbv2.util.TableUtils;
 
 import pt.ulisboa.tecnico.cnv.javassist.tools.Metrics;
