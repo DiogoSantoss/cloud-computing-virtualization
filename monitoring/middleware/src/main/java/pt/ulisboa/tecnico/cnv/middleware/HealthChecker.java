@@ -10,7 +10,7 @@ import java.util.logging.Logger;
 
 public class HealthChecker implements Runnable {
 
-    private static final Logger LOGGER = Logger.getLogger(HealthChecker.class.getName());
+    private static final CustomLogger LOGGER = new CustomLogger(HealthChecker.class.getName());
 
     private static final int TIMER = 10000;
 
@@ -34,7 +34,7 @@ public class HealthChecker implements Runnable {
 
     private void ping() {
 
-        LOGGER.info("Starting health check...");
+        LOGGER.log("Starting health check...");
 
         // Health check every known instance
         Set<InstanceInfo> instances = new HashSet<>();
@@ -59,23 +59,23 @@ public class HealthChecker implements Runnable {
                     if (response.toString().equals("OK")) {
 
                         if (this.awsInterface.getSuspectedInstances().contains(instance)) {
-                            LOGGER.info("Instance " + instance.getInstance().getInstanceId() + " became alive.");
+                            LOGGER.log("Instance " + instance.getInstance().getInstanceId() + " became alive.");
                             this.awsInterface.removeSuspectedInstance(instance);
                             this.awsInterface.addAliveInstance(instance);
                             instance.resetMissedHealthChecks();
                         } else {
-                            LOGGER.info("Instance " + instance.getInstance().getInstanceId() + " is still alive.");
+                            LOGGER.log("Instance " + instance.getInstance().getInstanceId() + " is still alive.");
                         }
 
                     } else {
 
                         if (this.awsInterface.getAliveInstances().contains(instance)) {
-                            LOGGER.info("Instance " + instance.getInstance().getInstanceId() + " is now suspected.");
+                            LOGGER.log("Instance " + instance.getInstance().getInstanceId() + " is now suspected.");
                             this.awsInterface.removeAliveInstance(instance);
                             this.awsInterface.addSuspectedInstance(instance);
                             instance.incrementMissedHealthChecks();
                         } else {
-                            LOGGER.info("Instance " + instance.getInstance().getInstanceId() + " is still suspected.");
+                            LOGGER.log("Instance " + instance.getInstance().getInstanceId() + " is still suspected.");
                             instance.incrementMissedHealthChecks();
                         }
 
@@ -84,18 +84,18 @@ public class HealthChecker implements Runnable {
             } catch (Exception e) {
 
                 if (this.awsInterface.getAliveInstances().contains(instance)) {
-                    LOGGER.info("Instance " + instance.getInstance().getInstanceId() + " is now suspected.");
+                    LOGGER.log("Instance " + instance.getInstance().getInstanceId() + " is now suspected.");
                     this.awsInterface.removeAliveInstance(instance);
                     this.awsInterface.addSuspectedInstance(instance);
                     instance.incrementMissedHealthChecks();
                 } else {
-                    LOGGER.info("Instance " + instance.getInstance().getInstanceId() + " is still suspected.");
+                    LOGGER.log("Instance " + instance.getInstance().getInstanceId() + " is still suspected.");
                     instance.incrementMissedHealthChecks();
                 }
 
             }
         });
 
-        LOGGER.info("Finished health check.");
+        LOGGER.log("Finished health check.");
     }
 }

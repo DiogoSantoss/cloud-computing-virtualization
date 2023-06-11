@@ -2,14 +2,12 @@ package pt.ulisboa.tecnico.cnv.middleware;
 
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
@@ -40,7 +38,6 @@ import com.amazonaws.services.lambda.AWSLambdaClientBuilder;
 import com.amazonaws.services.lambda.model.InvokeRequest;
 import com.amazonaws.services.lambda.model.InvokeResult;
 import com.amazonaws.services.lambda.model.ServiceException;
-import com.amazonaws.regions.Regions;
 
 import java.nio.charset.StandardCharsets;
 
@@ -48,7 +45,7 @@ import pt.ulisboa.tecnico.cnv.middleware.Utils.Pair;
 
 public class AWSInterface {
 
-    private static final Logger LOGGER = Logger.getLogger(AWSInterface.class.getName());
+    private static final CustomLogger LOGGER = new CustomLogger(AWSInterface.class.getName());
 
     private static String AWS_REGION = System.getenv("AWS_DEFAULT_REGION");
     private static String AMI_ID = System.getenv("AWS_AMI_ID");
@@ -85,7 +82,7 @@ public class AWSInterface {
                 .withCredentials(new EnvironmentVariableCredentialsProvider()).build();
 
         this.aliveInstances = queryAliveInstances();
-        LOGGER.info("Alive instances: " + this.aliveInstances.size());
+        LOGGER.log("Alive instances: " + this.aliveInstances.size());
     }
 
     public Set<InstanceInfo> getAliveInstances() {
@@ -121,7 +118,7 @@ public class AWSInterface {
      */
     public List<String> createInstances(int count) {
 
-        LOGGER.info("Creating " + count + " instances");
+        LOGGER.log("Creating " + count + " instances");
 
         RunInstancesRequest runInstancesRequest = new RunInstancesRequest();
         runInstancesRequest.withImageId(AMI_ID)
@@ -166,29 +163,35 @@ public class AWSInterface {
 
         this.aliveInstances.addAll(newInstancesInfo);
 
-        LOGGER.info("Total instances: " + this.aliveInstances.size());
-
-        // TODO check if healthy?
+        LOGGER.log("Total instances: " + this.aliveInstances.size());
 
         return newInstances.stream().map(i -> i.getInstanceId()).collect(Collectors.toList());
     }
 
-    public void terminateInstance() {
+    public void terminateInstances(int count) {
 
-        // TODO: Should terminate lowest CPU utilization instance
+        LOGGER.log("Terminating " + count + " instances");
+
+        // find 'count' least loaded instances
+        Set<InstanceInfo> instancesToTerminate = this.getAliveInstances().stream().sorted((i1, i2) -> {
+            return Double.compare(i1.getLoad(), i2.getLoad());
+        }).limit(count).collect(Collectors.toSet());
 
         // Remove from aliveInstances to prevent new requests
-        InstanceInfo instance = this.aliveInstances.iterator().next();
-        if (instance == null)
-            throw new RuntimeException("No instances to terminate");
-        this.aliveInstances.remove(instance);
+        this.aliveInstances.removeAll(instancesToTerminate);
 
-        // TODO: Wait for instance to terminate requests
-
-        TerminateInstancesRequest termInstanceReq = new TerminateInstancesRequest();
-        termInstanceReq.withInstanceIds(instance.getInstance().getInstanceId());
-        this.ec2.terminateInstances(termInstanceReq);
-
+        // Wait for instances to finish requests and terminate the instances
+        while(instancesToTerminate.size() != 0) {
+            for(InstanceInfo instance: instancesToTerminate) {
+                // Safe to terminate
+                if(instance.getRequests().size() == 0) {
+                    TerminateInstancesRequest termInstanceReq = new TerminateInstancesRequest();
+                    termInstanceReq.withInstanceIds(instance.getInstance().getInstanceId());
+                    this.ec2.terminateInstances(termInstanceReq);
+                    instancesToTerminate.remove(instance);
+                }
+            }
+        }
     }
 
     public Set<Instance> queryInstances() {
@@ -234,7 +237,7 @@ public class AWSInterface {
                     .withEndTime(new Date());
 
             this.cloudWatch.getMetricStatistics(request).getDatapoints().stream().forEach(
-                    d -> LOGGER.info("Instance " + iid + " CPU utilization: " + d.getAverage() + "%" + " at "
+                    d -> LOGGER.log("Instance " + iid + " CPU utilization: " + d.getAverage() + "%" + " at "
                             + d.getTimestamp()));
 
             double averageCPUUtilization = this.cloudWatch.getMetricStatistics(request).getDatapoints().stream()
@@ -262,16 +265,16 @@ public class AWSInterface {
 
             invokeResult = awsLambda.invoke(invokeRequest);
 
-            LOGGER.info("Lambda response status: " + invokeResult.getStatusCode());
+            LOGGER.log("Lambda response status: " + invokeResult.getStatusCode());
 
             String ans = new String(invokeResult.getPayload().array(), StandardCharsets.UTF_8);
 
             // write out the return value
-            LOGGER.info("Lambda Content: " + ans);
+            LOGGER.log("Lambda Content: " + ans);
             return ans;
 
         } catch (ServiceException e) {
-            LOGGER.info(e.getMessage());
+            LOGGER.log(e.getMessage());
             return null;
         }
     }
@@ -296,7 +299,7 @@ public class AWSInterface {
             // wait for the table to move into ACTIVE state
             TableUtils.waitUntilActive(dynamoDB, tableName);
         } catch (InterruptedException e) {
-            LOGGER.info(e.getMessage());
+            LOGGER.log(e.getMessage());
         }
     }
 }

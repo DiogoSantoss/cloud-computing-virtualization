@@ -1,15 +1,14 @@
 package pt.ulisboa.tecnico.cnv.middleware;
 
 import java.util.List;
-import java.util.logging.Logger;
 
 import pt.ulisboa.tecnico.cnv.middleware.Utils.Pair;
 
 public class AutoScaler implements Runnable {
  
-    private static final Logger LOGGER = Logger.getLogger(AutoScaler.class.getName());
-    
-    private static final int TIMER = 10000;
+    private static final CustomLogger LOGGER = new CustomLogger(AutoScaler.class.getName());
+     
+    private static final int SCALER_TIMER = 10000; // 10 seconds
 
     private AWSInterface awsInterface;
 
@@ -24,7 +23,7 @@ public class AutoScaler implements Runnable {
         while(true) {
             this.scale();
             try {
-                Thread.sleep(TIMER);
+                Thread.sleep(SCALER_TIMER);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -32,17 +31,16 @@ public class AutoScaler implements Runnable {
     }
 
     /*
-     * Decide whether to scale up or down based on the average CPU utilization and 
-     * average load of all instances.
+     * Decide whether to scale up or down based on the average CPU utilization of all instances.
+     * Instances are terminated based on their load to avoid terminating an instance that is
+     * currently processing a lot of requests.
      */
     private void scale() {
 
-        System.out.println("--------------------");
+        LOGGER.log("Scaling...");
 
         // Average CPU utilization for each instance
         List<Pair<String, Double>> results = this.awsInterface.queryCPUUtilization();
-
-        // (TODO) Average Load for each instance (based on requests)
 
         double avgCPUUtilization = 0;
         for(Pair<String, Double> result : results) {
@@ -51,17 +49,36 @@ public class AutoScaler implements Runnable {
         avgCPUUtilization /= results.size();
 
         if(Double.isNaN(avgCPUUtilization)) {
-            LOGGER.info("No data yet available...");
+            LOGGER.log("No data yet available...");
             return;
         }
 
-        LOGGER.info("Average CPU Utilization: " + avgCPUUtilization + " (" + results.size() + " instances)");
+        LOGGER.log("Average CPU Utilization: " + avgCPUUtilization + " (" + results.size() + " instances)");
         
-        // (TODO) Compute average Load over all instances
         if (avgCPUUtilization > 80) {
-            this.awsInterface.createInstances(1);
+            this.scaleUp();
         } else if (avgCPUUtilization < 20 && this.awsInterface.getAliveInstances().size() > 1) {
-            this.awsInterface.terminateInstance();
+            this.scaleDown();
         }
+    }
+
+    /*
+     * Increase the number of instances by 10%
+     */
+    private void scaleUp() {
+        int numberOfInstances = this.awsInterface.getAliveInstances().size();
+        int newNumberOfInstances = (int) Math.ceil(numberOfInstances * 1.1);
+        int numberOfInstancesToCreate = newNumberOfInstances - numberOfInstances;
+        this.awsInterface.createInstances(numberOfInstancesToCreate);
+    }
+
+    /*
+     * Decrease the number of instances by 10%
+     */
+    private void scaleDown() {
+        int numberOfInstances = this.awsInterface.getAliveInstances().size();
+        int newNumberOfInstances = (int) Math.ceil(numberOfInstances * 0.9);
+        int numberOfInstancesToTerminate = numberOfInstances - newNumberOfInstances;
+        this.awsInterface.terminateInstances(numberOfInstancesToTerminate);
     }
 }

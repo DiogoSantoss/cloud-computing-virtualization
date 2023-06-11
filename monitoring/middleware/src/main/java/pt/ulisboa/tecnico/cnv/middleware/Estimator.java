@@ -6,7 +6,7 @@ import java.util.logging.Logger;
 
 public class Estimator {
 
-    private static final Logger LOGGER = Logger.getLogger(Estimator.class.getName());
+    private static final CustomLogger LOGGER = new CustomLogger(Estimator.class.getName());
 
     private double simulationWorld1;
     private double simulationWorld2;
@@ -38,7 +38,7 @@ public class Estimator {
             case COMPRESSION:
                 return this.estimateCompression(request);
             default:
-                LOGGER.info("Failed to estimate: Invalid endpoint");
+                LOGGER.log("Failed to estimate: Invalid endpoint");
                 return 0;
         }
     }
@@ -59,7 +59,7 @@ public class Estimator {
             case "4":
                 estimatedCost = this.simulationWorld4 * Integer.parseInt(arguments.get(0));
             default:
-                LOGGER.info("Failed to estimate: Invalid world number");
+                LOGGER.log("Failed to estimate: Invalid world number");
                 estimatedCost = 0;
         }
         return estimatedCost;

@@ -32,4 +32,8 @@ public class InstanceInfo {
     public void resetMissedHealthChecks() {
         this.missedHealthChecks = 0;
     }
+
+    public double getLoad() {
+        return this.requests.stream().mapToDouble(r -> r.getEstimatedCost()).sum();
+    }
 }

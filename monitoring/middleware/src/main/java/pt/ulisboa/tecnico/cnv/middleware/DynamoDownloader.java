@@ -12,11 +12,10 @@ import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.logging.Logger;
 
 public class DynamoDownloader {
 
-    private final Logger LOGGER = Logger.getLogger(getClass().getName());
+    private static final CustomLogger LOGGER = new CustomLogger(DynamoDownloader.class.getClass().getName());
 
     private final String AWS_REGION = System.getenv("AWS_DEFAULT_REGION");
 
@@ -74,7 +73,7 @@ public class DynamoDownloader {
             // wait for the table to move into ACTIVE state
             TableUtils.waitUntilActive(dynamoDB, DYNAMO_DB_TABLE_NAME);
         } catch (InterruptedException e) {
-            LOGGER.info(e.getMessage());
+            LOGGER.log(e.getMessage());
         }
     }
 
@@ -95,10 +94,10 @@ public class DynamoDownloader {
 
         Map<String, AttributeValue> item = queryResult.getItem();
         if (queryResult.getItem() == null) {
-            LOGGER.info("queryResult.getItem() is null");
+            LOGGER.log("queryResult.getItem() is null");
             return Optional.empty();
         } else if (queryResult.getItem().size() == 0) {
-            LOGGER.info("queryResult.getItem().size() is 0");
+            LOGGER.log("queryResult.getItem().size() is 0");
             return Optional.empty();
         }
 

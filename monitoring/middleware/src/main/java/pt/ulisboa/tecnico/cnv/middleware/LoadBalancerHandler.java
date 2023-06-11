@@ -17,9 +17,9 @@ import com.sun.net.httpserver.HttpExchange;
 
 public class LoadBalancerHandler implements HttpHandler {
 
+    private static final CustomLogger LOGGER = new CustomLogger(LoadBalancerHandler.class.getName());
+    
     private static final int MAX_LAMBDA_REQUESTS = 10;
-
-    private static final Logger LOGGER = Logger.getLogger(LoadBalancerHandler.class.getName());
 
     private AWSInterface awsInterface;
 
@@ -97,7 +97,7 @@ public class LoadBalancerHandler implements HttpHandler {
                 return;
             }
 
-            LOGGER.info("Received request: " + t.getRequestURI().toString());
+            LOGGER.log("Received request: " + t.getRequestURI().toString());
 
             Request request = new Request(t.getRequestURI().toString(), t.getRequestBody());
             
@@ -107,17 +107,17 @@ public class LoadBalancerHandler implements HttpHandler {
             Optional<InstanceInfo> optInstance = this.getLowestLoadedInstance(request);
             if (optInstance.isEmpty()) {
 
-                LOGGER.info("No instances available to handle request.");
+                LOGGER.log("No instances available to handle request.");
                 
                 //TODO: Test if counter is correct
                 if (this.currentLambdaRequests.get() >= MAX_LAMBDA_REQUESTS) {
-                    LOGGER.info("Max lambda requests reached.");
+                    LOGGER.log("Max lambda requests reached.");
                     //TODO: Maybe launch new instance
                     
                     t.sendResponseHeaders(500, 0);
                     t.close();
                 } else {
-                    LOGGER.info("Calling lambda function for request: " + request.getURI());
+                    LOGGER.log("Calling lambda function for request: " + request.getURI());
 
                     this.currentLambdaRequests.incrementAndGet();
 
@@ -129,12 +129,12 @@ public class LoadBalancerHandler implements HttpHandler {
                     this.currentLambdaRequests.decrementAndGet();
 
                     if (response == null) {
-                        LOGGER.info("Error calling lambda function.");
+                        LOGGER.log("Error calling lambda function.");
                         t.sendResponseHeaders(500, 0);
                         t.close();
                         
                     } else {
-                        //LOGGER.info("Lambda function returned: " + response);
+                        //LOGGER.log("Lambda function returned: " + response);
                         t.sendResponseHeaders(200, response.length());
                         t.getResponseBody().write(response.getBytes());
                         t.close();
@@ -146,7 +146,7 @@ public class LoadBalancerHandler implements HttpHandler {
     
                 instance.getRequests().add(request);
         
-                LOGGER.info("Forwarding request to instance: " + instance.getInstance().getInstanceId());
+                LOGGER.log("Forwarding request to instance: " + instance.getInstance().getInstanceId());
         
                 HttpURLConnection con = sendRequestToWorker(instance, request, t);
 
@@ -156,7 +156,7 @@ public class LoadBalancerHandler implements HttpHandler {
             }
 
         } catch (Exception e) {
-            LOGGER.info("Error: " + e.getMessage());
+            LOGGER.log("Error: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -168,10 +168,10 @@ public class LoadBalancerHandler implements HttpHandler {
         if (cachedStatistics.isPresent()) {
             estimate = cachedStatistics.get().getInstructionCount();
 
-            LOGGER.info("Cache hit for " + request.getURI());
+            LOGGER.log("Cache hit for " + request.getURI());
         } else {
             estimate = this.estimator.estimate(request);
-            LOGGER.info("Cache miss for " + request.getURI());
+            LOGGER.log("Cache miss for " + request.getURI());
 
             // In the background fetch the statistics from DynamoDB
             Optional<Statistics> realCost = this.downloader.getFromStatistics(request);
@@ -179,14 +179,14 @@ public class LoadBalancerHandler implements HttpHandler {
             if (realCost.isPresent()) {
                 estimate = realCost.get().getInstructionCount();
 
-                LOGGER.info("Fetch real cost for " + request.getURI());
+                LOGGER.log("Fetch real cost for " + request.getURI());
             } else {
-                LOGGER.info("Failed to fetch real cost for " + request.getURI());
+                LOGGER.log("Failed to fetch real cost for " + request.getURI());
             }
         }
 
         request.setEstimatedCost(estimate);
-        LOGGER.info("Estimated cost: " + request.getEstimatedCost());
+        LOGGER.log("Estimated cost: " + request.getEstimatedCost());
     }
 
 
