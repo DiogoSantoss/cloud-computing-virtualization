@@ -2,12 +2,17 @@ package pt.ulisboa.tecnico.cnv.middleware;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.io.InputStream;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 
 public class Request {
 
     public enum Endpoint {
 
-        COMPRESSION("compressImage"),
+        COMPRESSION("compressimage"),
         SIMULATION("simulate"),
         WAR("insectwar");
 
@@ -32,32 +37,45 @@ public class Request {
      * Receive a URI (e.g. /compression?arg1=val1&arg2=val2&arg3=val3) 
      * and parse it into a Request object.
      */
-    public Request(String URI) {
+    public Request(String URI, InputStream body) {
 
+        this.arguments = new ArrayList<String>();
         this.originalURI = URI;
 
         String[] parts = URI.split("\\?");
 
-        switch (parts[0].split("/")[1]) {
-            case "compressImage":
+        switch (parts[0]) {
+            case "/compressimage":
                 this.endpoint = Endpoint.COMPRESSION;
+                this.parseArgumentsBody(body);
                 break;
-            case "simulate":
+            case "/simulate":
                 this.endpoint = Endpoint.SIMULATION;
+                this.parseArgumentsURI(parts[1]);   
                 break;
-            case "insectwar":
+            case "/insectwar":
                 this.endpoint = Endpoint.WAR;
+                this.parseArgumentsURI(parts[1]);
                 break;
         }
+    }
 
-        List<String> arguments = new ArrayList<String>();
+    private void parseArgumentsURI(String argumentsURI) {
+        String[] unparsedArguments = argumentsURI.split("&");
 
-        String[] unparsedArguments = parts[1].split("&");
         for (String part : unparsedArguments) {
-            arguments.add(part.split("=")[1]);
+            this.arguments.add(part.split("=")[1]);
         }
+    }
 
-        this.arguments = arguments;
+    private void parseArgumentsBody(InputStream bodyStream) {
+        // Result syntax: targetFormat:<targetFormat>;compressionFactor:<factor>;data:image/<currentFormat>;base64,<encoded image>
+        String result = new BufferedReader(new InputStreamReader(bodyStream)).lines().collect(Collectors.joining("\n"));
+        String[] resultSplits = result.split(",");
+
+        this.arguments.add(resultSplits[1]); // encoded image
+        this.arguments.add(resultSplits[0].split(":")[1].split(";")[0]); // targetFormat
+        this.arguments.add(resultSplits[0].split(":")[2].split(";")[0]); // compressionFactor
     }
 
     public Endpoint getEndpoint() {
@@ -88,7 +106,7 @@ public class Request {
     public String getLambdaRequest(){
         
         switch (this.endpoint.toString()) {
-            case "compressImage":
+            case "compressimage":
                 return String.format("{\"body\": \"%s\", \"targetFormat\": \"%s\", \"compressionFactor\": \"%s\"}", 
                     this.arguments.get(0), this.arguments.get(1), this.arguments.get(2));
             

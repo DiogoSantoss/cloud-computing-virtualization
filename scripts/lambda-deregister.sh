@@ -5,7 +5,7 @@
 
 aws lambda delete-function --function-name insectwar-lambda
 aws lambda delete-function --function-name simulate-lambda
-aws lambda delete-function --function-name compressImage-lambda
+aws lambda delete-function --function-name compressimage-lambda
 
 aws iam detach-role-policy \
 	--role-name lambda-role \

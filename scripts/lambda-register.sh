@@ -39,7 +39,7 @@ aws lambda create-function \
 sleep 5
 
 aws lambda create-function \
-	--function-name compressImage-lambda \
+	--function-name compressimage-lambda \
 	--zip-file fileb://../worker/compression/build/libs/compression.jar \
 	--handler pt.ulisboa.tecnico.cnv.compression.BaseCompressingHandler \
 	--runtime java11 \

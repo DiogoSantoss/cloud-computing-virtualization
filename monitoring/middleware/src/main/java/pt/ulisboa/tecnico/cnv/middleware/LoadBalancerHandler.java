@@ -3,6 +3,8 @@ package pt.ulisboa.tecnico.cnv.middleware;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
@@ -85,7 +87,6 @@ public class LoadBalancerHandler implements HttpHandler {
 
         try {
 
-            System.out.println("here");
             // Handling CORS
             t.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
 
@@ -99,10 +100,10 @@ public class LoadBalancerHandler implements HttpHandler {
 
             LOGGER.info("Received request: " + t.getRequestURI().toString());
 
-            Request request = new Request(t.getRequestURI().toString());
+            Request request = new Request(t.getRequestURI().toString(), t.getRequestBody());
             
             // Get request (estimated or real) cost
-            this.estimateRequestCost(request);
+            //this.estimateRequestCost(request);
 
             Optional<InstanceInfo> optInstance = this.getLowestLoadedInstance(request);
             if (optInstance.isEmpty()) {
@@ -121,7 +122,10 @@ public class LoadBalancerHandler implements HttpHandler {
 
                     this.currentLambdaRequests.incrementAndGet();
 
-                    String response = awsInterface.callLambda(request.getLambdaName(), request.getLambdaRequest());
+                    String content = request.getLambdaRequest();
+                    System.out.println("Content: " + content);
+
+                    String response = awsInterface.callLambda(request.getLambdaName(), content);
 
                     this.currentLambdaRequests.decrementAndGet();
 
@@ -191,6 +195,21 @@ public class LoadBalancerHandler implements HttpHandler {
         URL url = new URL("http://" + instance.getInstance().getPublicDnsName() + ":8000" + request.getURI());
         HttpURLConnection con = (HttpURLConnection) url.openConnection();
         con.setRequestMethod(t.getRequestMethod());
+        
+        if (t.getRequestMethod().equalsIgnoreCase("POST")) {
+            System.out.println("POST");
+            
+            con.setDoOutput(true);
+            con.setRequestProperty("Content-Type", "application/json");
+            con.setRequestProperty("Accept", "application/json");
+            OutputStream os = con.getOutputStream();
+            OutputStreamWriter osw = new OutputStreamWriter(os, "UTF-8");
+            osw.write(t.getRequestBody().toString());
+            osw.flush();
+            osw.close();
+            os.close();
+        }
+
         return con;
     }
 
@@ -205,7 +224,9 @@ public class LoadBalancerHandler implements HttpHandler {
             rd.close();
 
             t.sendResponseHeaders(200, response.length());
-            t.getResponseBody().write(response.toString().getBytes());
+            OutputStream os = t.getResponseBody();
+            os.write(response.toString().getBytes());
+            os.close();
             t.close();
         } else {
             t.sendResponseHeaders(500, 0);
