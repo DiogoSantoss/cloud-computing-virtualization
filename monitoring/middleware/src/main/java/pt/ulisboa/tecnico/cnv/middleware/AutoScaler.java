@@ -6,7 +6,7 @@ import pt.ulisboa.tecnico.cnv.middleware.Utils.Pair;
 
 public class AutoScaler implements Runnable {
  
-    private static final CustomLogger LOGGER = new CustomLogger(AutoScaler.class.getName());
+    private final CustomLogger LOGGER = new CustomLogger(AutoScaler.class.getName());
      
     private static final int SCALER_TIMER = 10000; // 10 seconds
 

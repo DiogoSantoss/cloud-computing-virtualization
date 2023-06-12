@@ -6,11 +6,10 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.logging.Logger;
 
 public class HealthChecker implements Runnable {
 
-    private static final CustomLogger LOGGER = new CustomLogger(HealthChecker.class.getName());
+    private final CustomLogger LOGGER = new CustomLogger(HealthChecker.class.getName());
 
     private static final int TIMER = 10000;
 

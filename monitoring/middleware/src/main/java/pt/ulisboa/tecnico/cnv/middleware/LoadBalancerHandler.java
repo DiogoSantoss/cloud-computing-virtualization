@@ -16,13 +16,11 @@ import com.sun.net.httpserver.HttpExchange;
 
 public class LoadBalancerHandler implements HttpHandler {
 
-    private static final CustomLogger LOGGER = new CustomLogger(LoadBalancerHandler.class.getName());
+    private final CustomLogger LOGGER = new CustomLogger(LoadBalancerHandler.class.getName());
 
     private static final int MAX_LAMBDA_REQUESTS = 10;
 
     private AWSInterface awsInterface;
-
-    private DynamoDownloader downloader;
 
     private Estimator estimator;
 
@@ -31,7 +29,6 @@ public class LoadBalancerHandler implements HttpHandler {
     public LoadBalancerHandler(AWSInterface awsInterface) {
         super();
         this.awsInterface = awsInterface;
-        this.downloader = new DynamoDownloader();
         this.estimator = new Estimator();
         this.currentLambdaRequests = new AtomicInteger(0);
     }
@@ -161,7 +158,7 @@ public class LoadBalancerHandler implements HttpHandler {
 
     private void estimateRequestCost(Request request) {
         double estimate;
-        Optional<Statistics> cachedStatistics = this.downloader.getFromCache(request);
+        Optional<Statistics> cachedStatistics = this.awsInterface.getFromCache(request);
 
         if (cachedStatistics.isPresent()) {
             estimate = cachedStatistics.get().getInstructionCount();
@@ -172,7 +169,7 @@ public class LoadBalancerHandler implements HttpHandler {
             LOGGER.log("Cache miss for " + request.getURI());
 
             // In the background fetch the statistics from DynamoDB
-            Optional<Statistics> realCost = this.downloader.getFromStatistics(request);
+            Optional<Statistics> realCost = this.awsInterface.getFromStatistics(request);
 
             if (realCost.isPresent()) {
                 estimate = realCost.get().getInstructionCount();
@@ -209,6 +206,7 @@ public class LoadBalancerHandler implements HttpHandler {
 
     private void replyToClient(HttpURLConnection con, HttpExchange t) throws IOException {
         if (con.getResponseCode() == HttpURLConnection.HTTP_OK) {
+            LOGGER.log("Request handled successfully, replying to client...");
             BufferedReader rd = new BufferedReader(new InputStreamReader(con.getInputStream()));
             StringBuffer response = new StringBuffer();
             String line;

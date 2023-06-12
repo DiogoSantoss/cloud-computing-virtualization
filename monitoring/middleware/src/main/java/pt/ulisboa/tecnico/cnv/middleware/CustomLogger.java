@@ -8,7 +8,7 @@ import java.util.logging.Logger;
 
 public class CustomLogger {
 
-    private static Logger LOGGER;
+    private Logger LOGGER;
 
     public CustomLogger(String name) {
         LOGGER = Logger.getLogger(name);
@@ -27,6 +27,7 @@ public class CustomLogger {
     }
 
     public void log(String message) {
+        message = "[" + LOGGER.getName().split("\\.")[LOGGER.getName().split("\\.").length - 1] + "] - " + message;
         LOGGER.log(Level.INFO, message);
     }
 }

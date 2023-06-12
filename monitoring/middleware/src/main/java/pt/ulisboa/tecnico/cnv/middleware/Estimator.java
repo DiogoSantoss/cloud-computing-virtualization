@@ -2,11 +2,10 @@ package pt.ulisboa.tecnico.cnv.middleware;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Logger;
 
 public class Estimator {
 
-    private static final CustomLogger LOGGER = new CustomLogger(Estimator.class.getName());
+    private final CustomLogger LOGGER = new CustomLogger(Estimator.class.getName());
 
     private double simulationWorld1;
     private double simulationWorld2;

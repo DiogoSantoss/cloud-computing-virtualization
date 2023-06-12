@@ -2,12 +2,17 @@ package pt.ulisboa.tecnico.cnv.middleware;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
@@ -18,11 +23,12 @@ import com.amazonaws.services.cloudwatch.model.GetMetricStatisticsRequest;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsyncClientBuilder;
 import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
+import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
+import com.amazonaws.services.dynamodbv2.model.GetItemRequest;
+import com.amazonaws.services.dynamodbv2.model.GetItemResult;
 import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
-import com.amazonaws.services.dynamodbv2.model.KeyType;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
-import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType;
 import com.amazonaws.services.dynamodbv2.util.TableUtils;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
@@ -45,12 +51,13 @@ import pt.ulisboa.tecnico.cnv.middleware.Utils.Pair;
 
 public class AWSInterface {
 
-    private static final CustomLogger LOGGER = new CustomLogger(AWSInterface.class.getName());
+    private final CustomLogger LOGGER = new CustomLogger(AWSInterface.class.getName());
 
-    private static String AWS_REGION = System.getenv("AWS_DEFAULT_REGION");
-    private static String AMI_ID = System.getenv("AWS_AMI_ID");
-    private static String KEY_NAME = System.getenv("AWS_KEYPAR_NAME");
-    private static String SEC_GROUP_ID = System.getenv("AWS_SECURITY_GROUP");
+    private final String AWS_REGION = System.getenv("AWS_DEFAULT_REGION");
+    private final String AMI_ID = System.getenv("AWS_AMI_ID");
+    private final String KEY_NAME = System.getenv("AWS_KEYPAR_NAME");
+    private final String SEC_GROUP_ID = System.getenv("AWS_SECURITY_GROUP");
+    private final String DYNAMO_DB_TABLE_NAME = System.getenv("DYNAMO_DB_TABLE_NAME");
 
     // Total observation time in milliseconds.
     private static long OBS_TIME = 1000 * 60 * 10; // 10 minutes
@@ -59,14 +66,18 @@ public class AWSInterface {
 
     private AmazonEC2 ec2;
     private AmazonCloudWatch cloudWatch;
-    // private LambdaClient lambdaClient;
+    //private LambdaClient lambdaClient;
     private AmazonDynamoDB dynamoDB;
-    private String tableName = "Statistics";
 
     private Set<InstanceInfo> aliveInstances = new HashSet<InstanceInfo>();
     private AtomicInteger idx = new AtomicInteger(0);
 
     private Set<InstanceInfo> suspectedInstances = new HashSet<InstanceInfo>();
+
+    // Cache for statistics
+    private final int CACHE_CAPACITY = 512;
+    private final Queue<Statistics> lruCache = new ConcurrentLinkedQueue<>();
+    private final Map<String, Statistics> cacheItems = new ConcurrentHashMap<>();
 
     // maybe for lambda calls
     //private Set<InstanceInfo> pendingInstances = new HashSet<InstanceInfo>();
@@ -76,10 +87,11 @@ public class AWSInterface {
                 .withCredentials(new EnvironmentVariableCredentialsProvider()).build();
         this.cloudWatch = AmazonCloudWatchClientBuilder.standard().withRegion(AWS_REGION)
                 .withCredentials(new EnvironmentVariableCredentialsProvider()).build();
-        // this.lambdaClient =
-        // LambdaClient.builder().credentialsProvider(EnvironmentVariableCredentialsProvider.create()).build();
+        //this.lambdaClient = LambdaClient.builder().credentialsProvider(EnvironmentVariableCredentialsProvider.create()).build();
         this.dynamoDB = AmazonDynamoDBAsyncClientBuilder.standard().withRegion(AWS_REGION)
                 .withCredentials(new EnvironmentVariableCredentialsProvider()).build();
+
+        this.createTableIfNotExists();
 
         this.aliveInstances = queryAliveInstances();
         LOGGER.log("Alive instances: " + this.aliveInstances.size());
@@ -285,21 +297,72 @@ public class AWSInterface {
      */
     public void createTableIfNotExists() {
         // Create a table with a primary hash key named 'name', which holds a string
-        CreateTableRequest createTableRequest = new CreateTableRequest().withTableName(tableName)
-                .withKeySchema(new KeySchemaElement().withAttributeName("name").withKeyType(KeyType.HASH))
-                .withAttributeDefinitions(
-                        new AttributeDefinition().withAttributeName("name").withAttributeType(ScalarAttributeType.S))
-                .withProvisionedThroughput(
-                        new ProvisionedThroughput().withReadCapacityUnits(1L).withWriteCapacityUnits(1L));
+        CreateTableRequest createTableRequest = new CreateTableRequest()
+            .withTableName(DYNAMO_DB_TABLE_NAME)
+            .withAttributeDefinitions(new AttributeDefinition()
+                .withAttributeName("RequestParams")
+                .withAttributeType("S"))
+                .withKeySchema(new KeySchemaElement()
+                    .withAttributeName("RequestParams")
+                    .withKeyType("HASH"))
+                .withProvisionedThroughput(new ProvisionedThroughput()
+                    .withReadCapacityUnits(1L)
+                    .withWriteCapacityUnits(1L))
+                .withTableClass("STANDARD");
 
         // Create table if it does not exist yet
         TableUtils.createTableIfNotExists(dynamoDB, createTableRequest);
 
         try {
             // wait for the table to move into ACTIVE state
-            TableUtils.waitUntilActive(dynamoDB, tableName);
+            TableUtils.waitUntilActive(dynamoDB, DYNAMO_DB_TABLE_NAME);
         } catch (InterruptedException e) {
             LOGGER.log(e.getMessage());
         }
+    }
+
+    private void addToCache(Statistics stat) {
+        // non-thread safe, should only be called while a mutex is acquired
+        if (cacheItems.containsKey(stat.getRequestParams())) return;
+        while (lruCache.size() >= CACHE_CAPACITY) {
+            // we are assuming FIFO
+            Statistics item = lruCache.remove();
+            cacheItems.remove(item.getRequestParams());
+        }
+        cacheItems.put(stat.getRequestParams(), stat);
+        lruCache.add(stat);
+    }
+
+    public Optional<Statistics> getFromCache(Request request) {
+        synchronized (this) {
+            Statistics item = cacheItems.get(request.getURI());
+            return item == null ? Optional.empty() : Optional.of(item);
+        }
+    }
+
+    public Optional<Statistics> getFromStatistics(Request request) {
+        Map<String, AttributeValue> query = new HashMap<>();
+        query.put("RequestParams", new AttributeValue().withS(request.getURI()));
+
+        GetItemResult queryResult = dynamoDB.getItem(new GetItemRequest()
+            .withTableName(DYNAMO_DB_TABLE_NAME)
+            .withKey(query));
+
+        Map<String, AttributeValue> item = queryResult.getItem();
+        if (queryResult.getItem() == null) {
+            LOGGER.log("queryResult.getItem() is null");
+            return Optional.empty();
+        } else if (queryResult.getItem().size() == 0) {
+            LOGGER.log("queryResult.getItem().size() is 0");
+            return Optional.empty();
+        }
+
+        synchronized (this) {
+            // Assuming every field is correct
+            Statistics stat = new Statistics(item.get("RequestParams").getS(), Long.parseLong(item.get("InstCount").getN()), Long.parseLong(item.get("BasicBlockCount").getN()));
+            addToCache(stat);
+            return Optional.of(stat);
+        }
+
     }
 }
