@@ -14,10 +14,10 @@ public class WebServer {
         AWSInterface awsInterface = new AWSInterface();
 
         // Health Checker
-        /* HealthChecker healthChecker = new HealthChecker(awsInterface);
+        HealthChecker healthChecker = new HealthChecker(awsInterface);
         Thread healthCheckerThread = new Thread(healthChecker);
         healthCheckerThread.start();
-        System.out.println("HealthChecker started..."); */
+        System.out.println("HealthChecker started...");
 
         // Auto Scaler
         AutoScaler autoScaler = new AutoScaler(awsInterface);

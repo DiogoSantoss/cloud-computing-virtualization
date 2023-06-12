@@ -10,7 +10,6 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.logging.Logger;
 import java.util.concurrent.atomic.AtomicInteger;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpExchange;
@@ -18,7 +17,7 @@ import com.sun.net.httpserver.HttpExchange;
 public class LoadBalancerHandler implements HttpHandler {
 
     private static final CustomLogger LOGGER = new CustomLogger(LoadBalancerHandler.class.getName());
-    
+
     private static final int MAX_LAMBDA_REQUESTS = 10;
 
     private AWSInterface awsInterface;
@@ -50,7 +49,7 @@ public class LoadBalancerHandler implements HttpHandler {
 
         int idx = this.awsInterface.updateAndGetIdx();
         return Optional.of(instances.get(idx));
-    } 
+    }
 
     /*
      * Select the instance with the lowest load to forward the request to.
@@ -86,7 +85,6 @@ public class LoadBalancerHandler implements HttpHandler {
     public void handle(HttpExchange t) {
 
         try {
-
             // Handling CORS
             t.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
 
@@ -100,20 +98,20 @@ public class LoadBalancerHandler implements HttpHandler {
             LOGGER.log("Received request: " + t.getRequestURI().toString());
 
             Request request = new Request(t.getRequestURI().toString(), t.getRequestBody());
-            
+
             // Get request (estimated or real) cost
-            //this.estimateRequestCost(request);
+            this.estimateRequestCost(request);
 
             Optional<InstanceInfo> optInstance = this.getLowestLoadedInstance(request);
             if (optInstance.isEmpty()) {
 
                 LOGGER.log("No instances available to handle request.");
-                
-                //TODO: Test if counter is correct
+
+                // TODO: Test if counter is correct
                 if (this.currentLambdaRequests.get() >= MAX_LAMBDA_REQUESTS) {
                     LOGGER.log("Max lambda requests reached.");
-                    //TODO: Maybe launch new instance
-                    
+                    // TODO: Maybe launch new instance
+
                     t.sendResponseHeaders(500, 0);
                     t.close();
                 } else {
@@ -132,9 +130,9 @@ public class LoadBalancerHandler implements HttpHandler {
                         LOGGER.log("Error calling lambda function.");
                         t.sendResponseHeaders(500, 0);
                         t.close();
-                        
+
                     } else {
-                        //LOGGER.log("Lambda function returned: " + response);
+                        // LOGGER.log("Lambda function returned: " + response);
                         t.sendResponseHeaders(200, response.length());
                         t.getResponseBody().write(response.getBytes());
                         t.close();
@@ -143,16 +141,16 @@ public class LoadBalancerHandler implements HttpHandler {
 
             } else {
                 InstanceInfo instance = optInstance.get();
-    
+
                 instance.getRequests().add(request);
-        
+
                 LOGGER.log("Forwarding request to instance: " + instance.getInstance().getInstanceId());
-        
+
                 HttpURLConnection con = sendRequestToWorker(instance, request, t);
 
                 instance.getRequests().remove(request);
 
-                replyToClient(con, t);   
+                replyToClient(con, t);
             }
 
         } catch (Exception e) {
@@ -178,7 +176,6 @@ public class LoadBalancerHandler implements HttpHandler {
 
             if (realCost.isPresent()) {
                 estimate = realCost.get().getInstructionCount();
-
                 LOGGER.log("Fetch real cost for " + request.getURI());
             } else {
                 LOGGER.log("Failed to fetch real cost for " + request.getURI());
@@ -189,15 +186,13 @@ public class LoadBalancerHandler implements HttpHandler {
         LOGGER.log("Estimated cost: " + request.getEstimatedCost());
     }
 
-
-    private HttpURLConnection sendRequestToWorker(InstanceInfo instance, Request request, HttpExchange t) throws IOException {
+    private HttpURLConnection sendRequestToWorker(InstanceInfo instance, Request request, HttpExchange t)
+            throws IOException {
         URL url = new URL("http://" + instance.getInstance().getPublicDnsName() + ":8000" + request.getURI());
         HttpURLConnection con = (HttpURLConnection) url.openConnection();
         con.setRequestMethod(t.getRequestMethod());
-        
+
         if (t.getRequestMethod().equalsIgnoreCase("POST")) {
-            System.out.println("POST");
-            
             con.setDoOutput(true);
             con.setRequestProperty("Content-Type", "application/json");
             con.setRequestProperty("Accept", "application/json");
