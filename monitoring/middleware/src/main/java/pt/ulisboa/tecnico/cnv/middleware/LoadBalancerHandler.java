@@ -91,7 +91,7 @@ public class LoadBalancerHandler implements HttpHandler {
                 /*
                  *  
                  */
-                /
+          
 
                 t.getResponseHeaders().add("Access-Control-Allow-Methods", "GET,OPTIONS,POST");
                 t.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type,Authorization,API-Key");
@@ -192,7 +192,7 @@ public class LoadBalancerHandler implements HttpHandler {
             HttpRequest optionsRequest = HttpRequest.newBuilder()
                     .uri(new URI("http://" + instance.getInstance().getPublicDnsName() + ":8000" + request.getURI()))
                     .method("OPTIONS", HttpRequest.BodyPublishers.noBody())
-                    .setHeader()
+                    .build();
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                     .uri(new URI("http://" + instance.getInstance().getPublicDnsName() + ":8000" + request.getURI()))
                     .POST(HttpRequest.BodyPublishers

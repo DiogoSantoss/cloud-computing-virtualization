@@ -147,7 +147,11 @@ def sendImages():
                     k*0.1, img.split(".")[1], 
                     base64.b64encode(image.read()).decode("utf-8")
                 )
-                requests.post("http://localhost:8000/compressimage", data=payload)
+                print(payload)
+                #requests.post("http://localhost:8000/compressimage", data=payload)
+            break
+        break
+    
 
 
 if __name__ == "__main__":
