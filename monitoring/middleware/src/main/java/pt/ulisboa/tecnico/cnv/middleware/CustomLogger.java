@@ -30,6 +30,11 @@ public class CustomLogger {
         message = "[" + LOGGER.getName().split("\\.")[LOGGER.getName().split("\\.").length - 1] + "] - " + message;
         LOGGER.log(Level.INFO, message);
     }
+
+
+    public void log(String format, Object... args) {
+        LOGGER.log(Level.INFO, "[" + LOGGER.getName().split("\\.")[LOGGER.getName().split("\\.").length - 1] + "] - " + String.format(format, args));
+    }
 }
 
 class CustomLog extends Formatter {

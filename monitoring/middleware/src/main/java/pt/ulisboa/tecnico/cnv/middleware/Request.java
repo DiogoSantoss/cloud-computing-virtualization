@@ -28,6 +28,7 @@ public class Request {
     }
 
     private String originalURI;
+    private InputStream body;
     private Endpoint endpoint;
     private List<String> arguments;
     private double estimatedCost;
@@ -40,6 +41,7 @@ public class Request {
 
         this.arguments = new ArrayList<String>();
         this.originalURI = URI;
+        this.body = body;
 
         String[] parts = URI.split("\\?");
 
@@ -125,5 +127,9 @@ public class Request {
     @Override
     public String toString() {
         return this.originalURI;
+    }
+
+    public InputStream getBody() {
+        return body;
     }
 }

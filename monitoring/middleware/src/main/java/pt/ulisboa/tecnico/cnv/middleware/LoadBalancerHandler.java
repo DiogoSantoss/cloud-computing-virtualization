@@ -1,30 +1,31 @@
 package pt.ulisboa.tecnico.cnv.middleware;
 
-import java.io.BufferedReader;
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpHandler;
+
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
-import com.sun.net.httpserver.HttpHandler;
-import com.sun.net.httpserver.HttpExchange;
 
 public class LoadBalancerHandler implements HttpHandler {
 
-    private final CustomLogger LOGGER = new CustomLogger(LoadBalancerHandler.class.getName());
-
     private static final int MAX_LAMBDA_REQUESTS = 10;
+    private final CustomLogger LOGGER = new CustomLogger(LoadBalancerHandler.class.getName());
+    private final AWSInterface awsInterface;
 
-    private AWSInterface awsInterface;
+    private final Estimator estimator;
 
-    private Estimator estimator;
-
-    private AtomicInteger currentLambdaRequests;
+    private final AtomicInteger currentLambdaRequests;
 
     public LoadBalancerHandler(AWSInterface awsInterface) {
         super();
@@ -86,13 +87,20 @@ public class LoadBalancerHandler implements HttpHandler {
             t.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
 
             if (t.getRequestMethod().equalsIgnoreCase("OPTIONS")) {
-                t.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, OPTIONS");
-                t.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type,Authorization");
+
+                /*
+                 *  
+                 */
+                /
+
+                t.getResponseHeaders().add("Access-Control-Allow-Methods", "GET,OPTIONS,POST");
+                t.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type,Authorization,API-Key");
                 t.sendResponseHeaders(204, -1);
                 return;
             }
 
             LOGGER.log("Received request: " + t.getRequestURI().toString());
+            LOGGER.log("Request Method: " + t.getRequestMethod());
 
             Request request = new Request(t.getRequestURI().toString(), t.getRequestBody());
 
@@ -143,11 +151,11 @@ public class LoadBalancerHandler implements HttpHandler {
 
                 LOGGER.log("Forwarding request to instance: " + instance.getInstance().getInstanceId());
 
-                HttpURLConnection con = sendRequestToWorker(instance, request, t);
+                HttpResponse<byte[]> res = sendRequestToWorker(instance, request, t);
 
                 instance.getRequests().remove(request);
 
-                replyToClient(con, t);
+                replyToClient(res, t);
             }
 
         } catch (Exception e) {
@@ -175,41 +183,49 @@ public class LoadBalancerHandler implements HttpHandler {
         LOGGER.log("Estimated cost: " + request.getEstimatedCost());
     }
 
-    private HttpURLConnection sendRequestToWorker(InstanceInfo instance, Request request, HttpExchange t)
-            throws IOException {
-        URL url = new URL("http://" + instance.getInstance().getPublicDnsName() + ":8000" + request.getURI());
-        HttpURLConnection con = (HttpURLConnection) url.openConnection();
-        con.setRequestMethod(t.getRequestMethod());
+    private HttpResponse<byte[]> sendRequestToWorker(InstanceInfo instance, Request request, HttpExchange t)
+            throws IOException, URISyntaxException, InterruptedException {
 
-        if (t.getRequestMethod().equalsIgnoreCase("POST")) {
-            con.setDoOutput(true);
-            con.setRequestProperty("Content-Type", "application/json");
-            con.setRequestProperty("Accept", "application/json");
-            OutputStream os = con.getOutputStream();
-            OutputStreamWriter osw = new OutputStreamWriter(os, "UTF-8");
-            osw.write(t.getRequestBody().toString());
-            osw.flush();
-            osw.close();
-            os.close();
+        HttpClient client = HttpClient.newHttpClient();
+
+        if (t.getRequestMethod().equals("POST")) {
+            HttpRequest optionsRequest = HttpRequest.newBuilder()
+                    .uri(new URI("http://" + instance.getInstance().getPublicDnsName() + ":8000" + request.getURI()))
+                    .method("OPTIONS", HttpRequest.BodyPublishers.noBody())
+                    .setHeader()
+            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                    .uri(new URI("http://" + instance.getInstance().getPublicDnsName() + ":8000" + request.getURI()))
+                    .POST(HttpRequest.BodyPublishers
+                            .ofInputStream(() -> {
+                                try {
+                                    return new ByteArrayInputStream(request.getBody().readAllBytes());
+                                } catch (IOException e) {
+                                    throw new RuntimeException(e);
+                                }
+                            }));
+            t.getRequestHeaders().forEach((key, value) -> {
+                if (!key.equals("Connection") && !key.equals("Host") && !key.equals("Content-length"))
+                    requestBuilder.setHeader(key, String.join(",", value));
+            });
+            HttpRequest workerRequest = requestBuilder.build();
+            return client.send(workerRequest, HttpResponse.BodyHandlers.ofByteArray());
+        } else {
+            HttpRequest workerRequest = HttpRequest.newBuilder()
+                    .uri(new URI("http://" + instance.getInstance().getPublicDnsName() + ":8000" + request.getURI()))
+                    .GET()
+                    .build();
+            return client.send(workerRequest, HttpResponse.BodyHandlers.ofByteArray());
         }
-
-        return con;
     }
 
-    private void replyToClient(HttpURLConnection con, HttpExchange t) throws IOException {
-        if (con.getResponseCode() == HttpURLConnection.HTTP_OK) {
+    private void replyToClient(HttpResponse<byte[]> res, HttpExchange t) throws IOException {
+        LOGGER.log("Response Code: %s", res.toString());
+        if (res.statusCode() == HttpURLConnection.HTTP_OK) {
             LOGGER.log("Request handled successfully, replying to client...");
-            BufferedReader rd = new BufferedReader(new InputStreamReader(con.getInputStream()));
-            StringBuffer response = new StringBuffer();
-            String line;
-            while ((line = rd.readLine()) != null) {
-                response.append(line);
-            }
-            rd.close();
-
-            t.sendResponseHeaders(200, response.length());
+            byte[] body = res.body();
+            t.sendResponseHeaders(HttpURLConnection.HTTP_OK, body.length);
             OutputStream os = t.getResponseBody();
-            os.write(response.toString().getBytes());
+            os.write(body);
             os.close();
             t.close();
         } else {
