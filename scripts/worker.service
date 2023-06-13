@@ -1,0 +1,9 @@
+[Unit]
+Description=Worker Service for CNV
+
+[Service]
+ExecStart=/usr/bin/bash -c "source /home/ec2-user/my_config.sh && java -cp /home/ec2-user/webserver.jar -Xbootclasspath/a:/home/ec2-user/javassist.jar -javaagent:/home/ec2-user/javassist.jar=Metrics:pt.ulisboa.tecnico.cnv,javax.imageio:output pt.ulisboa.tecnico.cnv.webserver.WebServer"
+
+[Install]
+WantedBy=default.target
+

@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+set -x
+set -e
+
 # Only source script if hostname is not chord (vasco)
 [ "$(hostname)" != "chord" ] && source my_config.sh
 [ "$(hostname)" == "chord" ] && cat ../.envrc | grep -i export | tee my_config.sh
@@ -38,6 +41,9 @@ echo "New instance with id $(cat instance.id) is ready for SSH access."
 cmd="sudo yum update -y; sudo yum install java-11-amazon-corretto.x86_64 -y;"
 ssh -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEYPAR_PATH ec2-user@$(cat instance.dns) $cmd
 
+# Build jars if they do not exist
+[[ ! -f "../worker/webserver/build/libs/webserver.jar" ]] && (cd ../worker ; ./gradlew jar ; cd ../scripts)
+
 # Copy webserver jar
 scp -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEYPAR_PATH ../worker/webserver/build/libs/webserver.jar ec2-user@$(cat instance.dns):
 
@@ -48,8 +54,13 @@ scp -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEYPAR_PATH ../worker/javassist/
 scp -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEYPAR_PATH my_config.sh ec2-user@$(cat instance.dns): 
 
 # Setup web server to start on instance launch.
-cmd="echo \"source my_config.sh && java -cp /home/ec2-user/webserver.jar -Xbootclasspath/a:/home/ec2-user/javassist.jar -javaagent:/home/ec2-user/javassist.jar=Metrics:pt.ulisboa.tecnico.cnv,javax.imageio:output pt.ulisboa.tecnico.cnv.webserver.WebServer 2> worker_logs.txt\" | sudo tee -a /etc/rc.local; sudo chmod +x /etc/rc.local"
+scp -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEYPAR_PATH worker.service ec2-user@$(cat instance.dns):~/
+cmd="sudo mkdir -p /etc/systemd/system ; sudo cp /home/ec2-user/worker.service /etc/systemd/system/ ; sudo systemctl enable --now worker.service"
 ssh -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEYPAR_PATH ec2-user@$(cat instance.dns) $cmd
+
+# Setup web server to start on instance launch.
+# cmd="echo \"source my_config.sh && java -cp /home/ec2-user/webserver.jar -Xbootclasspath/a:/home/ec2-user/javassist.jar -javaagent:/home/ec2-user/javassist.jar=Metrics:pt.ulisboa.tecnico.cnv,javax.imageio:output pt.ulisboa.tecnico.cnv.webserver.WebServer 2> worker_logs.txt\" | sudo tee -a /etc/rc.local; sudo chmod +x /etc/rc.local"
+# ssh -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEYPAR_PATH ec2-user@$(cat instance.dns) $cmd
 
 # Step 3: test VM instance.
 
