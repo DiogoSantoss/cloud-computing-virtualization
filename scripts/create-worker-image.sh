@@ -2,6 +2,7 @@
 
 # Only source script if hostname is not chord (vasco)
 [ "$(hostname)" != "chord" ] && source my_config.sh
+[ "$(hostname)" == "chord" ] && echo "CUIDADO VASCO É PRECISO COPIAR A MY_CONFIG.SH PARA DENTRO DO WORKER!" && exit 1
 echo "Creating Worker Image..."
 
 # Step 1: launch a vm instance.
@@ -43,8 +44,11 @@ scp -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEYPAR_PATH ../worker/webserver/
 # Copy javassist jar
 scp -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEYPAR_PATH ../worker/javassist/build/libs/javassist.jar ec2-user@$(cat instance.dns):
 
+# Copy config file (Note: image.id is missing but worker does not need it)
+scp -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEYPAR_PATH my_config.sh ec2-user@$(cat instance.dns): 
+
 # Setup web server to start on instance launch.
-cmd="echo \"java -cp /home/ec2-user/webserver.jar -Xbootclasspath/a:/home/ec2-user/javassist.jar -javaagent:/home/ec2-user/javassist.jar=Metrics:pt.ulisboa.tecnico.cnv,javax.imageio:output pt.ulisboa.tecnico.cnv.webserver.WebServer > worker_logs.txt\" | sudo tee -a /etc/rc.local; sudo chmod +x /etc/rc.local"
+cmd="echo \"source my_config.sh && java -cp /home/ec2-user/webserver.jar -Xbootclasspath/a:/home/ec2-user/javassist.jar -javaagent:/home/ec2-user/javassist.jar=Metrics:pt.ulisboa.tecnico.cnv,javax.imageio:output pt.ulisboa.tecnico.cnv.webserver.WebServer 2> worker_logs.txt\" | sudo tee -a /etc/rc.local; sudo chmod +x /etc/rc.local"
 ssh -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEYPAR_PATH ec2-user@$(cat instance.dns) $cmd
 
 # Step 3: test VM instance.
