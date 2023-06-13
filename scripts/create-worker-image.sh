@@ -2,7 +2,7 @@
 
 # Only source script if hostname is not chord (vasco)
 [ "$(hostname)" != "chord" ] && source my_config.sh
-[ "$(hostname)" == "chord" ] && echo "CUIDADO VASCO É PRECISO COPIAR A MY_CONFIG.SH PARA DENTRO DO WORKER!" && exit 1
+[ "$(hostname)" == "chord" ] && cat ../.envrc | grep -i export | tee my_config.sh
 echo "Creating Worker Image..."
 
 # Step 1: launch a vm instance.
