@@ -161,22 +161,14 @@ public class LoadBalancerHandler implements HttpHandler {
         Optional<Statistics> cachedStatistics = this.awsInterface.getFromCache(request);
 
         if (cachedStatistics.isPresent()) {
-            estimate = cachedStatistics.get().getInstructionCount();
-
             LOGGER.log("Cache hit for " + request.getURI());
+            estimate = cachedStatistics.get().getInstructionCount();
         } else {
-            estimate = this.estimator.estimate(request);
             LOGGER.log("Cache miss for " + request.getURI());
+            estimate = this.estimator.estimate(request);
 
-            // In the background fetch the statistics from DynamoDB
-            Optional<Statistics> realCost = this.awsInterface.getFromStatistics(request);
-
-            if (realCost.isPresent()) {
-                estimate = realCost.get().getInstructionCount();
-                LOGGER.log("Fetch real cost for " + request.getURI());
-            } else {
-                LOGGER.log("Failed to fetch real cost for " + request.getURI());
-            }
+            // Fetch from db in the background (non-blocking)
+            this.awsInterface.getFromStatistics(request);
         }
 
         request.setEstimatedCost(estimate);

@@ -66,7 +66,7 @@ public class AWSInterface {
 
     private AmazonEC2 ec2;
     private AmazonCloudWatch cloudWatch;
-    //private LambdaClient lambdaClient;
+    // private LambdaClient lambdaClient;
     private AmazonDynamoDB dynamoDB;
 
     private Set<InstanceInfo> aliveInstances = new HashSet<InstanceInfo>();
@@ -80,14 +80,15 @@ public class AWSInterface {
     private final Map<String, Statistics> cacheItems = new ConcurrentHashMap<>();
 
     // maybe for lambda calls
-    //private Set<InstanceInfo> pendingInstances = new HashSet<InstanceInfo>();
+    // private Set<InstanceInfo> pendingInstances = new HashSet<InstanceInfo>();
 
     public AWSInterface() {
         this.ec2 = AmazonEC2ClientBuilder.standard().withRegion(AWS_REGION)
                 .withCredentials(new EnvironmentVariableCredentialsProvider()).build();
         this.cloudWatch = AmazonCloudWatchClientBuilder.standard().withRegion(AWS_REGION)
                 .withCredentials(new EnvironmentVariableCredentialsProvider()).build();
-        //this.lambdaClient = LambdaClient.builder().credentialsProvider(EnvironmentVariableCredentialsProvider.create()).build();
+        // this.lambdaClient =
+        // LambdaClient.builder().credentialsProvider(EnvironmentVariableCredentialsProvider.create()).build();
         this.dynamoDB = AmazonDynamoDBAsyncClientBuilder.standard().withRegion(AWS_REGION)
                 .withCredentials(new EnvironmentVariableCredentialsProvider()).build();
 
@@ -180,6 +181,12 @@ public class AWSInterface {
         return newInstances.stream().map(i -> i.getInstanceId()).collect(Collectors.toList());
     }
 
+    public void terminateInstance(InstanceInfo instance) {
+        TerminateInstancesRequest termInstanceReq = new TerminateInstancesRequest();
+        termInstanceReq.withInstanceIds(instance.getInstance().getInstanceId());
+        this.ec2.terminateInstances(termInstanceReq);
+    }
+
     public void terminateInstances(int count) {
 
         LOGGER.log("Terminating " + count + " instances");
@@ -193,10 +200,10 @@ public class AWSInterface {
         this.aliveInstances.removeAll(instancesToTerminate);
 
         // Wait for instances to finish requests and terminate the instances
-        while(instancesToTerminate.size() != 0) {
-            for(InstanceInfo instance: instancesToTerminate) {
+        while (instancesToTerminate.size() != 0) {
+            for (InstanceInfo instance : instancesToTerminate) {
                 // Safe to terminate
-                if(instance.getRequests().size() == 0) {
+                if (instance.getRequests().size() == 0) {
                     TerminateInstancesRequest termInstanceReq = new TerminateInstancesRequest();
                     termInstanceReq.withInstanceIds(instance.getInstance().getInstanceId());
                     this.ec2.terminateInstances(termInstanceReq);
@@ -248,10 +255,6 @@ public class AWSInterface {
                     .withDimensions(instanceDimension)
                     .withEndTime(new Date());
 
-            this.cloudWatch.getMetricStatistics(request).getDatapoints().stream().forEach(
-                    d -> LOGGER.log("Instance " + iid + " CPU utilization: " + d.getAverage() + "%" + " at "
-                            + d.getTimestamp()));
-
             double averageCPUUtilization = this.cloudWatch.getMetricStatistics(request).getDatapoints().stream()
                     .mapToDouble(Datapoint::getAverage).average().orElse(Double.NaN);
 
@@ -298,16 +301,16 @@ public class AWSInterface {
     public void createTableIfNotExists() {
         // Create a table with a primary hash key named 'name', which holds a string
         CreateTableRequest createTableRequest = new CreateTableRequest()
-            .withTableName(DYNAMO_DB_TABLE_NAME)
-            .withAttributeDefinitions(new AttributeDefinition()
-                .withAttributeName("RequestParams")
-                .withAttributeType("S"))
+                .withTableName(DYNAMO_DB_TABLE_NAME)
+                .withAttributeDefinitions(new AttributeDefinition()
+                        .withAttributeName("RequestParams")
+                        .withAttributeType("S"))
                 .withKeySchema(new KeySchemaElement()
-                    .withAttributeName("RequestParams")
-                    .withKeyType("HASH"))
+                        .withAttributeName("RequestParams")
+                        .withKeyType("HASH"))
                 .withProvisionedThroughput(new ProvisionedThroughput()
-                    .withReadCapacityUnits(1L)
-                    .withWriteCapacityUnits(1L))
+                        .withReadCapacityUnits(1L)
+                        .withWriteCapacityUnits(1L))
                 .withTableClass("STANDARD");
 
         // Create table if it does not exist yet
@@ -323,7 +326,8 @@ public class AWSInterface {
 
     private void addToCache(Statistics stat) {
         // non-thread safe, should only be called while a mutex is acquired
-        if (cacheItems.containsKey(stat.getRequestParams())) return;
+        if (cacheItems.containsKey(stat.getRequestParams()))
+            return;
         while (lruCache.size() >= CACHE_CAPACITY) {
             // we are assuming FIFO
             Statistics item = lruCache.remove();
@@ -340,29 +344,38 @@ public class AWSInterface {
         }
     }
 
-    public Optional<Statistics> getFromStatistics(Request request) {
-        Map<String, AttributeValue> query = new HashMap<>();
-        query.put("RequestParams", new AttributeValue().withS(request.getURI()));
+    /*
+     * Creates a new thread to query the database
+     */
+    public void getFromStatistics(Request request) {
 
-        GetItemResult queryResult = dynamoDB.getItem(new GetItemRequest()
-            .withTableName(DYNAMO_DB_TABLE_NAME)
-            .withKey(query));
+        Thread thread = new Thread() {
+            public void run() {
+                Map<String, AttributeValue> query = new HashMap<>();
+                query.put("RequestParams", new AttributeValue().withS(request.getURI()));
 
-        Map<String, AttributeValue> item = queryResult.getItem();
-        if (queryResult.getItem() == null) {
-            LOGGER.log("queryResult.getItem() is null");
-            return Optional.empty();
-        } else if (queryResult.getItem().size() == 0) {
-            LOGGER.log("queryResult.getItem().size() is 0");
-            return Optional.empty();
-        }
+                GetItemResult queryResult = dynamoDB.getItem(new GetItemRequest()
+                        .withTableName(DYNAMO_DB_TABLE_NAME)
+                        .withKey(query));
 
-        synchronized (this) {
-            // Assuming every field is correct
-            Statistics stat = new Statistics(item.get("RequestParams").getS(), Long.parseLong(item.get("InstCount").getN()), Long.parseLong(item.get("BasicBlockCount").getN()));
-            addToCache(stat);
-            return Optional.of(stat);
-        }
+                Map<String, AttributeValue> item = queryResult.getItem();
+                if (queryResult.getItem() == null) {
+                    return;
+                } else if (queryResult.getItem().size() == 0) {
+                    return;
+                }
 
+                synchronized (this) {
+                    // Assuming every field is correct
+                    Statistics stat = new Statistics(item.get("RequestParams").getS(),
+                            Long.parseLong(item.get("InstCount").getN()),
+                            Long.parseLong(item.get("BasicBlockCount").getN()));
+                    addToCache(stat);
+                    request.setEstimatedCost(stat.getInstructionCount());
+                }
+            }
+        };
+
+        thread.start();
     }
 }

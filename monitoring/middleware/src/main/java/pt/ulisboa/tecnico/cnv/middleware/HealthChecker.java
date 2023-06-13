@@ -33,7 +33,7 @@ public class HealthChecker implements Runnable {
 
     private void ping() {
 
-        LOGGER.log("Starting health check...");
+        LOGGER.log("Running health check...");
 
         // Health check every known instance
         Set<InstanceInfo> instances = new HashSet<>();
@@ -58,12 +58,11 @@ public class HealthChecker implements Runnable {
                     if (response.toString().equals("OK")) {
 
                         if (this.awsInterface.getSuspectedInstances().contains(instance)) {
-                            LOGGER.log("Instance " + instance.getInstance().getInstanceId() + " became alive.");
                             this.awsInterface.removeSuspectedInstance(instance);
                             this.awsInterface.addAliveInstance(instance);
                             instance.resetMissedHealthChecks();
-                        } else {
-                            LOGGER.log("Instance " + instance.getInstance().getInstanceId() + " is still alive.");
+                            LOGGER.log(
+                                    "Instance " + instance.getInstance().getInstanceId() + " is no longer suspected.");
                         }
 
                     } else {
@@ -93,8 +92,18 @@ public class HealthChecker implements Runnable {
                 }
 
             }
+
+            // Terminate instances that have missed 3 health checks
+            if (instance.getMissedHealthChecks() >= 3) {
+                LOGGER.log(
+                        "Terminating instance " + instance.getInstance().getInstanceId() + ", missed 3 health checks.");
+                this.awsInterface.terminateInstance(instance);
+
+                // BIG TODO: Redirect requests to other instances
+            }
         });
 
-        LOGGER.log("Finished health check.");
+        LOGGER.log("Finished health check. Healthy instances: " + this.awsInterface.getAliveInstances().size()
+                + " Suspected instances: " + this.awsInterface.getSuspectedInstances().size() + ".");
     }
 }

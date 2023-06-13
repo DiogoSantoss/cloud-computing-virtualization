@@ -29,17 +29,23 @@ public class Estimator {
     }
 
     public double estimate(Request request) {
-        switch(request.getEndpoint()) {
+        double estimatedCost = 0;
+        switch (request.getEndpoint()) {
             case SIMULATION:
-                return this.estimateSimulation(request);
+                estimatedCost = this.estimateSimulation(request);
+                break;
             case WAR:
-                return this.estimateInsectWars(request);
+                estimatedCost = this.estimateInsectWars(request);
+                break;
             case COMPRESSION:
-                return this.estimateCompression(request);
+                estimatedCost = this.estimateCompression(request);
+                break;
             default:
-                LOGGER.log("Failed to estimate: Invalid endpoint");
-                return 0;
+                estimatedCost = 0;
         }
+
+        LOGGER.log("Estimated cost for " + request.toString() + " is " + estimatedCost);
+        return estimatedCost;
     }
 
     private double estimateSimulation(Request request) {
@@ -51,14 +57,17 @@ public class Estimator {
         switch (arguments.get(1)) {
             case "1":
                 estimatedCost = this.simulationWorld1 * Integer.parseInt(arguments.get(0));
+                break;
             case "2":
                 estimatedCost = this.simulationWorld2 * Integer.parseInt(arguments.get(0));
+                break;
             case "3":
                 estimatedCost = this.simulationWorld3 * Integer.parseInt(arguments.get(0));
+                break;
             case "4":
                 estimatedCost = this.simulationWorld4 * Integer.parseInt(arguments.get(0));
+                break;
             default:
-                LOGGER.log("Failed to estimate: Invalid world number");
                 estimatedCost = 0;
         }
         return estimatedCost;
@@ -77,7 +86,8 @@ public class Estimator {
         int armyDiff = Math.abs(army1 - army2);
         int armyAvg = (army1 + army2) / 2;
 
-        estimatedCost = armyDiff * this.insectWarWeights.get(0) + armyAvg * this.insectWarWeights.get(1) + max * this.insectWarWeights.get(2);
+        estimatedCost = (armyDiff * this.insectWarWeights.get(0) + armyAvg * this.insectWarWeights.get(1)
+                + max * this.insectWarWeights.get(2))*10000000;
         return estimatedCost;
     }
 

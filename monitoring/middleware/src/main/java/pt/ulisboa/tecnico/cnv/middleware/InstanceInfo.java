@@ -21,6 +21,10 @@ public class InstanceInfo {
         return this.instance;
     }
 
+    public int getMissedHealthChecks() {
+        return this.missedHealthChecks;
+    }
+
     public List<Request> getRequests() {
         return this.requests;
     }
