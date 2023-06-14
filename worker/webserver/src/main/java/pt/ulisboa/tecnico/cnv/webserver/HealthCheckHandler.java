@@ -1,17 +1,20 @@
 package pt.ulisboa.tecnico.cnv.webserver;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Map;
 
 import com.amazonaws.services.lambda.runtime.RequestHandler;
+import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
 public class HealthCheckHandler implements HttpHandler, RequestHandler<Map<String, String>, String> {
     
     @Override
-    public void handle(com.sun.net.httpserver.HttpExchange r) throws java.io.IOException {
+    public void handle(HttpExchange r) throws IOException {
         String response = "OK";
         r.sendResponseHeaders(200, response.length());
-        java.io.OutputStream os = r.getResponseBody();
+        OutputStream os = r.getResponseBody();
         os.write(response.getBytes());
         os.close();
     }

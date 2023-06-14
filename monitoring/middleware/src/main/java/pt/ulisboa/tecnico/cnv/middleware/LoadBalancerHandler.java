@@ -3,12 +3,17 @@ package pt.ulisboa.tecnico.cnv.middleware;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -16,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public class LoadBalancerHandler implements HttpHandler {
 
@@ -87,20 +93,11 @@ public class LoadBalancerHandler implements HttpHandler {
             t.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
 
             if (t.getRequestMethod().equalsIgnoreCase("OPTIONS")) {
-
-                /*
-                 *  
-                 */
-          
-
                 t.getResponseHeaders().add("Access-Control-Allow-Methods", "GET,OPTIONS,POST");
                 t.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type,Authorization,API-Key");
                 t.sendResponseHeaders(204, -1);
                 return;
             }
-
-            LOGGER.log("Received request: " + t.getRequestURI().toString());
-            LOGGER.log("Request Method: " + t.getRequestMethod());
 
             Request request = new Request(t.getRequestURI().toString(), t.getRequestBody());
 
@@ -146,16 +143,13 @@ public class LoadBalancerHandler implements HttpHandler {
 
             } else {
                 InstanceInfo instance = optInstance.get();
-
                 instance.getRequests().add(request);
 
                 LOGGER.log("Forwarding request to instance: " + instance.getInstance().getInstanceId());
 
-                HttpResponse<byte[]> res = sendRequestToWorker(instance, request, t);
-
+                HttpURLConnection con = sendRequestToWorker(instance, request, t);
                 instance.getRequests().remove(request);
-
-                replyToClient(res, t);
+                replyToClient(con, t);
             }
 
         } catch (Exception e) {
@@ -183,49 +177,39 @@ public class LoadBalancerHandler implements HttpHandler {
         LOGGER.log("Estimated cost: " + request.getEstimatedCost());
     }
 
-    private HttpResponse<byte[]> sendRequestToWorker(InstanceInfo instance, Request request, HttpExchange t)
-            throws IOException, URISyntaxException, InterruptedException {
+    private HttpURLConnection sendRequestToWorker(InstanceInfo instance, Request request, HttpExchange t)
+            throws IOException {
+        URL url = new URL("http://" + instance.getInstance().getPublicDnsName() + ":8000" + request.getURI());
+        HttpURLConnection con = (HttpURLConnection) url.openConnection();
+        con.setRequestMethod(t.getRequestMethod());
 
-        HttpClient client = HttpClient.newHttpClient();
-
-        if (t.getRequestMethod().equals("POST")) {
-            HttpRequest optionsRequest = HttpRequest.newBuilder()
-                    .uri(new URI("http://" + instance.getInstance().getPublicDnsName() + ":8000" + request.getURI()))
-                    .method("OPTIONS", HttpRequest.BodyPublishers.noBody())
-                    .build();
-            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                    .uri(new URI("http://" + instance.getInstance().getPublicDnsName() + ":8000" + request.getURI()))
-                    .POST(HttpRequest.BodyPublishers
-                            .ofInputStream(() -> {
-                                try {
-                                    return new ByteArrayInputStream(request.getBody().readAllBytes());
-                                } catch (IOException e) {
-                                    throw new RuntimeException(e);
-                                }
-                            }));
-            t.getRequestHeaders().forEach((key, value) -> {
-                if (!key.equals("Connection") && !key.equals("Host") && !key.equals("Content-length"))
-                    requestBuilder.setHeader(key, String.join(",", value));
-            });
-            HttpRequest workerRequest = requestBuilder.build();
-            return client.send(workerRequest, HttpResponse.BodyHandlers.ofByteArray());
-        } else {
-            HttpRequest workerRequest = HttpRequest.newBuilder()
-                    .uri(new URI("http://" + instance.getInstance().getPublicDnsName() + ":8000" + request.getURI()))
-                    .GET()
-                    .build();
-            return client.send(workerRequest, HttpResponse.BodyHandlers.ofByteArray());
+        if (t.getRequestMethod().equalsIgnoreCase("POST")) {
+            con.setDoOutput(true);
+            con.setRequestProperty("Content-Type", "application/json;charset=UTF-8");
+            con.setRequestProperty("Accept", "*");
+            OutputStream os = con.getOutputStream();
+            os.write(request.getBody());
+            os.flush();
+            os.close();
         }
+
+        return con;
     }
 
-    private void replyToClient(HttpResponse<byte[]> res, HttpExchange t) throws IOException {
-        LOGGER.log("Response Code: %s", res.toString());
-        if (res.statusCode() == HttpURLConnection.HTTP_OK) {
+    private void replyToClient(HttpURLConnection con, HttpExchange t) throws IOException {
+        if (con.getResponseCode() == HttpURLConnection.HTTP_OK) {
             LOGGER.log("Request handled successfully, replying to client...");
-            byte[] body = res.body();
-            t.sendResponseHeaders(HttpURLConnection.HTTP_OK, body.length);
+            BufferedReader rd = new BufferedReader(new InputStreamReader(con.getInputStream()));
+            StringBuffer response = new StringBuffer();
+            String line;
+            while ((line = rd.readLine()) != null) {
+                response.append(line);
+            }
+            rd.close();
+
+            t.sendResponseHeaders(200, response.length());
             OutputStream os = t.getResponseBody();
-            os.write(body);
+            os.write(response.toString().getBytes());
             os.close();
             t.close();
         } else {

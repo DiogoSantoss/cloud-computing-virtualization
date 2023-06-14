@@ -28,7 +28,7 @@ public class Request {
     }
 
     private String originalURI;
-    private InputStream body;
+    private byte[] body;
     private Endpoint endpoint;
     private List<String> arguments;
     private double estimatedCost;
@@ -41,7 +41,6 @@ public class Request {
 
         this.arguments = new ArrayList<String>();
         this.originalURI = URI;
-        this.body = body;
 
         String[] parts = URI.split("\\?");
 
@@ -72,8 +71,9 @@ public class Request {
     private void parseArgumentsBody(InputStream bodyStream) {
         // Result syntax: targetFormat:<targetFormat>;compressionFactor:<factor>;data:image/<currentFormat>;base64,<encoded image>
         String result = new BufferedReader(new InputStreamReader(bodyStream)).lines().collect(Collectors.joining("\n"));
-        String[] resultSplits = result.split(",");
+        this.body = result.getBytes();
 
+        String[] resultSplits = result.split(",");
         this.arguments.add(resultSplits[1]); // encoded image
         this.arguments.add(resultSplits[0].split(":")[1].split(";")[0]); // targetFormat
         this.arguments.add(resultSplits[0].split(":")[2].split(";")[0]); // compressionFactor
@@ -129,7 +129,7 @@ public class Request {
         return this.originalURI;
     }
 
-    public InputStream getBody() {
+    public byte[] getBody() {
         return body;
     }
 }
