@@ -4,24 +4,15 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
 import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 public class LoadBalancerHandler implements HttpHandler {
 
@@ -98,14 +89,14 @@ public class LoadBalancerHandler implements HttpHandler {
                 t.sendResponseHeaders(204, -1);
                 return;
             }
-
+        
             Request request = new Request(t.getRequestURI().toString(), t.getRequestBody());
 
             // Get request (estimated or real) cost
             this.estimateRequestCost(request);
 
             Optional<InstanceInfo> optInstance = this.getLowestLoadedInstance(request);
-            if (optInstance.isEmpty() || true) {
+            if (optInstance.isEmpty()) {
 
                 LOGGER.log("No instances available to handle request.");
 

@@ -1,7 +1,13 @@
 package pt.ulisboa.tecnico.cnv.middleware;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
+
+import javax.imageio.ImageIO;
 
 public class Estimator {
 
@@ -92,8 +98,38 @@ public class Estimator {
     }
 
     private double estimateCompression(Request request) {
-        // TODO
-        return 0;
+        
+        int imagePixeis;
+        String encodedImage = request.getArguments().get(0);
+        byte[] decodedImage = Base64.getDecoder().decode(encodedImage);
+        try {
+            ByteArrayInputStream bais = new ByteArrayInputStream(decodedImage);
+            BufferedImage bi = ImageIO.read(bais);
+            imagePixeis = bi.getWidth() * bi.getHeight();
+        } catch(IOException e) {
+            LOGGER.log(e.getMessage());
+            e.printStackTrace();
+            return 0;
+        }
+
+        int estimatedCost;
+        String targetFormat = request.getArguments().get(1);
+        int compressionFactor = Integer.parseInt(request.getArguments().get(2));
+        switch(targetFormat) {
+            case "PNG":
+                estimatedCost = 0;
+                break;
+            case "JPEG":
+                estimatedCost = 0;
+                break;
+            case "BMP": // compression doens't affect
+                estimatedCost = 0;
+                break;
+            default:
+                estimatedCost = 0;
+        }
+
+        return estimatedCost;
     }
 
 }

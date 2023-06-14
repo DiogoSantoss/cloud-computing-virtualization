@@ -344,11 +344,13 @@ public class AWSInterface {
 
     /*
      * Creates a new thread to query the database
+     * Updates the cache if it find a blue
      */
     public void getFromStatistics(Request request) {
 
         Thread thread = new Thread() {
             public void run() {
+                LOGGER.log("Fetching statistics from database in the background...");
                 Map<String, AttributeValue> query = new HashMap<>();
                 query.put("RequestParams", new AttributeValue().withS(request.getURI()));
 
@@ -357,9 +359,8 @@ public class AWSInterface {
                         .withKey(query));
 
                 Map<String, AttributeValue> item = queryResult.getItem();
-                if (queryResult.getItem() == null) {
-                    return;
-                } else if (queryResult.getItem().size() == 0) {
+                if (queryResult.getItem() == null || queryResult.getItem().size() == 0) {
+                    LOGGER.log("No statistics found for request: " + request.getURI());
                     return;
                 }
 
@@ -368,6 +369,10 @@ public class AWSInterface {
                     Statistics stat = new Statistics(item.get("RequestParams").getS(),
                             Long.parseLong(item.get("InstCount").getN()),
                             Long.parseLong(item.get("BasicBlockCount").getN()));
+
+                    LOGGER.log("Statistics found for request: " + request.getURI() + " with "
+                            + stat.getInstructionCount() + " instructions");
+
                     addToCache(stat);
                     request.setEstimatedCost(stat.getInstructionCount());
                 }
