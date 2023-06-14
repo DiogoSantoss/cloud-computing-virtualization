@@ -41,7 +41,7 @@ sleep 5
 aws lambda create-function \
 	--function-name compressimage-lambda \
 	--zip-file fileb://../worker/compression/build/libs/compression.jar \
-	--handler pt.ulisboa.tecnico.cnv.compression.BaseCompressingHandler \
+	--handler pt.ulisboa.tecnico.cnv.compression.CompressImageHandlerImpl \
 	--runtime java11 \
 	--timeout 5 \
 	--memory-size 256 \

@@ -105,7 +105,7 @@ public class LoadBalancerHandler implements HttpHandler {
             this.estimateRequestCost(request);
 
             Optional<InstanceInfo> optInstance = this.getLowestLoadedInstance(request);
-            if (optInstance.isEmpty()) {
+            if (optInstance.isEmpty() || true) {
 
                 LOGGER.log("No instances available to handle request.");
 
@@ -124,7 +124,9 @@ public class LoadBalancerHandler implements HttpHandler {
                     String content = request.getLambdaRequest();
                     System.out.println("Content: " + content);
 
-                    String response = awsInterface.callLambda(request.getLambdaName(), content);
+                    String response = awsInterface.callLambda(request.getLambdaName(), content);          
+                    response = response.replace("\"","");
+                    LOGGER.log("Lambda Content: " + response);
 
                     this.currentLambdaRequests.decrementAndGet();
 
@@ -136,7 +138,9 @@ public class LoadBalancerHandler implements HttpHandler {
                     } else {
                         // LOGGER.log("Lambda function returned: " + response);
                         t.sendResponseHeaders(200, response.length());
-                        t.getResponseBody().write(response.getBytes());
+                        OutputStream os = t.getResponseBody();
+                        os.write(response.toString().getBytes());
+                        os.close();
                         t.close();
                     }
                 }

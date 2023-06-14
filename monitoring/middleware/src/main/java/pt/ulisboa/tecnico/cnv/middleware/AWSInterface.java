@@ -284,8 +284,6 @@ public class AWSInterface {
 
             String ans = new String(invokeResult.getPayload().array(), StandardCharsets.UTF_8);
 
-            // write out the return value
-            LOGGER.log("Lambda Content: " + ans);
             return ans;
 
         } catch (ServiceException e) {

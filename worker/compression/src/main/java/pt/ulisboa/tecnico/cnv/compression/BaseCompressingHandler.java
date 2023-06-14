@@ -61,6 +61,7 @@ public abstract class BaseCompressingHandler implements HttpHandler, RequestHand
 
     @Override
     public String handleRequest(Map<String, String> event, Context context) {
-        return handleRequest(event.get("body"), event.get("targetFormat"), Float.parseFloat(event.get("compressionFactor")));
+        String output = String.format("data:image/%s;base64,%s", event.get("targetFormat"),handleRequest(event.get("body"), event.get("targetFormat"), Float.parseFloat(event.get("compressionFactor"))));
+        return output;
     }
 }

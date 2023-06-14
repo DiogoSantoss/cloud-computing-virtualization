@@ -147,8 +147,9 @@ def sendImages():
                     k*0.1, img.split(".")[1], 
                     base64.b64encode(image.read()).decode("utf-8")
                 )
-                print(payload)
-                #requests.post("http://localhost:8000/compressimage", data=payload)
+                #print(payload)
+                r = requests.post("http://ec2-52-4-95-82.compute-1.amazonaws.com:8000/compressimage", data=payload)
+                print(r.text)
             break
         break
     
