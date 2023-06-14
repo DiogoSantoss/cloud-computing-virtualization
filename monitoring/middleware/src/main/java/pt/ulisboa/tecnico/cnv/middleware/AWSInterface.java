@@ -24,11 +24,13 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsyncClientBuilder;
 import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.amazonaws.services.dynamodbv2.model.ComparisonOperator;
+import com.amazonaws.services.dynamodbv2.model.Condition;
 import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
-import com.amazonaws.services.dynamodbv2.model.GetItemRequest;
-import com.amazonaws.services.dynamodbv2.model.GetItemResult;
 import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
+import com.amazonaws.services.dynamodbv2.model.ScanRequest;
+import com.amazonaws.services.dynamodbv2.model.ScanResult;
 import com.amazonaws.services.dynamodbv2.util.TableUtils;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
@@ -127,7 +129,7 @@ public class AWSInterface {
     }
 
     /*
-     * Blocking
+     * Create count instances and blocks the execution until they are created
      */
     public List<String> createInstances(int count) {
 
@@ -343,30 +345,75 @@ public class AWSInterface {
         Thread thread = new Thread() {
             public void run() {
                 LOGGER.log("Fetching statistics from database in the background...");
-                Map<String, AttributeValue> query = new HashMap<>();
-                query.put("RequestParams", new AttributeValue().withS(request.getURI()));
 
-                GetItemResult queryResult = dynamoDB.getItem(new GetItemRequest()
-                        .withTableName(DYNAMO_DB_TABLE_NAME)
-                        .withKey(query));
+                Map<String, Condition> filter = new HashMap<>();
 
-                Map<String, AttributeValue> item = queryResult.getItem();
-                if (queryResult.getItem() == null || queryResult.getItem().size() == 0) {
+                Condition endpointCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ.toString())
+                    .withAttributeValueList(new AttributeValue().withS(request.getEndpoint().toString()));
+
+                filter.put("endpoint", endpointCondition);
+
+                switch(request.getEndpoint()) {
+                    case SIMULATION:
+                        Condition worldCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ.toString())
+                            .withAttributeValueList(
+                                new AttributeValue().withN(request.getArguments().get(1)));
+                        filter.put("world", worldCondition);
+                        Condition generationCondition = new Condition().withComparisonOperator(ComparisonOperator.BETWEEN.toString())
+                            .withAttributeValueList(
+                                new AttributeValue().withN(String.valueOf(Integer.parseInt(request.getArguments().get(0)) - 50)),
+                                new AttributeValue().withN(String.valueOf(Integer.parseInt(request.getArguments().get(0) + 50))));
+                        filter.put("generations", generationCondition);
+                        Condition scenarioCondition = new Condition().withComparisonOperator(ComparisonOperator.BETWEEN.toString())
+                            .withAttributeValueList(
+                                new AttributeValue().withN("1"),
+                                new AttributeValue().withN("4"));
+                        filter.put("scenario", scenarioCondition);
+
+
+                        break;
+                    case WAR:
+                        break;
+
+                    case COMPRESSION:
+                        break;
+
+                    default:
+                }
+
+                ScanRequest scanRequest = new ScanRequest()
+                    .withTableName(DYNAMO_DB_TABLE_NAME)
+                    .withScanFilter(filter);
+
+                ScanResult scanResult = dynamoDB.scan(scanRequest);
+
+                List<Map<String, AttributeValue>> items = scanResult.getItems();
+                if (items == null || items.size() == 0) {
                     LOGGER.log("No statistics found for request: " + request.getURI());
                     return;
                 }
 
                 synchronized (this) {
-                    // Assuming every field is correct
-                    Statistics stat = new Statistics(item.get("RequestParams").getS(),
-                            Long.parseLong(item.get("InstCount").getN()),
-                            Long.parseLong(item.get("BasicBlockCount").getN()));
+                    items.stream().forEach(item -> {
+                        // Assuming every field is correct
+                        Statistics stat = new Statistics(item.get("RequestParams").getS(),
+                                Long.parseLong(item.get("InstCount").getN()),
+                                Long.parseLong(item.get("BasicBlockCount").getN()));
 
-                    LOGGER.log("Statistics found for request: " + request.getURI() + " with "
-                            + stat.getInstructionCount() + " instructions");
+                        LOGGER.log("Statistics found for request: " + request.getURI() + " with "
+                                + stat.getInstructionCount() + " instructions");
 
-                    addToCache(stat);
-                    request.setEstimatedCost(stat.getInstructionCount());
+                        addToCache(stat);
+                    });
+                }
+
+                Optional<Statistics> stat = getFromCache(request);
+                if(stat.isPresent()) {
+                    request.setEstimatedCost(stat.get().getInstructionCount());
+                } else {
+                    items.stream().mapToDouble(item -> Double.parseDouble(item.get("InstructionCount").getS())).average().ifPresent(avg -> {
+                        request.setEstimatedCost(avg);
+                    });
                 }
             }
         };

@@ -43,27 +43,55 @@ public class DynamoWriter implements Runnable {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            
-            synchronized(Metrics.dynamoQueue) {
-                workQueue.addAll(Metrics.dynamoQueue);
-                Metrics.dynamoQueue.clear();
-            }
 
-            // TODO: Only submit metrics in batches of 25
+            synchronized(Metrics.dynamoQueue) {
+                // Read first 25 elements from queue
+                workQueue.addAll(Metrics.dynamoQueue.subList(0, Math.min(25, Metrics.dynamoQueue.size())));
+                Metrics.dynamoQueue = Metrics.dynamoQueue.subList(Math.min(25, Metrics.dynamoQueue.size()), Metrics.dynamoQueue.size());
+            }
             
             LOGGER.info("Running scheduled DynamoDB write");
             if (workQueue.isEmpty()) {
                 LOGGER.info("No metrics to write");
                 continue;
-            }
+            } 
 
             Optional<List<PutItemRequest>> requests = Optional.of(this.workQueue.stream().map(m -> {
+
+                String requestParameters = m.getLeft();
+                String firstSplit[] = requestParameters.split("\\?");
+                String secondSplit[] = firstSplit[1].split("&");
+
+                String endpoint = firstSplit[0].split("/")[1];
+                List<String> parameters = Arrays.stream(secondSplit).map(s -> s.split("=")[1]).collect(Collectors.toList());
+
                 Map<String, AttributeValue> item = new HashMap<>();
                 item.put("RequestParams", new AttributeValue().withS(m.getLeft()));
                 item.put("InstructionCount", new AttributeValue().withN(Long.toString(m.getRight().getInstCount())));
                 item.put("BasicBlockCount", new AttributeValue().withN(Long.toString(m.getRight().getBasicBlockCount())));
+
+                item.put("endpoint", new AttributeValue().withS(endpoint));
+                switch(endpoint) {
+                    case "simulate":
+                        item.put("generations", new AttributeValue().withS(parameters.get(0)));
+                        item.put("world", new AttributeValue().withS(parameters.get(1)));
+                        item.put("scenario", new AttributeValue().withS(parameters.get(2)));
+                        break;
+                    case "insectwar":
+                        item.put("max", new AttributeValue().withS(parameters.get(0)));
+                        item.put("army1", new AttributeValue().withS(parameters.get(1)));
+                        item.put("army2", new AttributeValue().withS(parameters.get(2)));
+                        break;
+                    case "compressimage":
+                        item.put("resolution", new AttributeValue().withS(parameters.get(0)));
+                        item.put("targetFormat", new AttributeValue().withS(parameters.get(1)));
+                        item.put("compressionFactor", new AttributeValue().withS(parameters.get(2)));
+                        break;
+                }
+
                 return new PutItemRequest().withItem(item).withTableName(DYNAMO_DB_TABLE_NAME);
             }).collect(Collectors.toList()));
+
             workQueue.clear();
 
             requests.ifPresent(w -> {

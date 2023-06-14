@@ -112,18 +112,22 @@ public class Estimator {
             return 0;
         }
 
-        int estimatedCost;
         String targetFormat = request.getArguments().get(1);
         int compressionFactor = Integer.parseInt(request.getArguments().get(2));
+        
+        int estimatedCost;
         switch(targetFormat) {
             case "PNG":
-                estimatedCost = 0;
+                estimatedCost = (int) Math.ceil(276958.771);
                 break;
             case "JPEG":
-                estimatedCost = 0;
+                double baseSlope = 0.00268249844;
+                double maxSlope = 0.0266551814;
+                double slope = baseSlope + (maxSlope - baseSlope) * compressionFactor;
+                estimatedCost = (int) Math.ceil(slope * imagePixeis + 23000);
                 break;
             case "BMP": // compression doens't affect
-                estimatedCost = 0;
+                estimatedCost = (int) Math.ceil(imagePixeis * 0.358 + 26088.4532);
                 break;
             default:
                 estimatedCost = 0;
