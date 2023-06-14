@@ -8,7 +8,7 @@ import java.net.InetSocketAddress;
 import com.sun.net.httpserver.HttpServer;
 
 public class WebServer {
- 
+
     public static void main(String[] args) throws Exception {
 
         AWSInterface awsInterface = new AWSInterface();

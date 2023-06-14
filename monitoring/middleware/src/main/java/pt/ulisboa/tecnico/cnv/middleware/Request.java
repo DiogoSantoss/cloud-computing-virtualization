@@ -34,7 +34,7 @@ public class Request {
     private double estimatedCost;
 
     /*
-     * Receive a URI (e.g. /compression?arg1=val1&arg2=val2&arg3=val3) 
+     * Receive a URI (e.g. /compression?arg1=val1&arg2=val2&arg3=val3)
      * and parse it into a Request object.
      */
     public Request(String URI, InputStream body) {
@@ -51,7 +51,7 @@ public class Request {
                 break;
             case "/simulate":
                 this.endpoint = Endpoint.SIMULATION;
-                this.parseArgumentsURI(parts[1]);   
+                this.parseArgumentsURI(parts[1]);
                 break;
             case "/insectwar":
                 this.endpoint = Endpoint.WAR;
@@ -69,7 +69,9 @@ public class Request {
     }
 
     private void parseArgumentsBody(InputStream bodyStream) {
-        // Result syntax: targetFormat:<targetFormat>;compressionFactor:<factor>;data:image/<currentFormat>;base64,<encoded image>
+        // Result syntax:
+        // targetFormat:<targetFormat>;compressionFactor:<factor>;data:image/<currentFormat>;base64,<encoded
+        // image>
         String result = new BufferedReader(new InputStreamReader(bodyStream)).lines().collect(Collectors.joining("\n"));
         this.body = result.getBytes();
 
@@ -101,27 +103,27 @@ public class Request {
 
     public String getLambdaName() {
         return this.endpoint.toString() + "-lambda";
-        
+
     }
 
-    public String getLambdaRequest(){
-        
+    public String getLambdaRequest() {
+
         switch (this.endpoint.toString()) {
             case "compressimage":
-                return String.format("{\"body\": \"%s\", \"targetFormat\": \"%s\", \"compressionFactor\": \"%s\"}", 
-                    this.arguments.get(0), this.arguments.get(1), this.arguments.get(2));
-            
+                return String.format("{\"body\": \"%s\", \"targetFormat\": \"%s\", \"compressionFactor\": \"%s\"}",
+                        this.arguments.get(0), this.arguments.get(1), this.arguments.get(2));
+
             case "insectwar":
-                return String.format("{\"max\": \"%s\", \"army1\": \"%s\", \"army2\": \"%s\"}", 
-                    this.arguments.get(0), this.arguments.get(1), this.arguments.get(2));
-            
+                return String.format("{\"max\": \"%s\", \"army1\": \"%s\", \"army2\": \"%s\"}",
+                        this.arguments.get(0), this.arguments.get(1), this.arguments.get(2));
+
             case "simulate":
-                return String.format("{\"generations\": \"%s\", \"world\": \"%s\", \"scenario\": \"%s\"}", 
-                    this.arguments.get(0), this.arguments.get(1), this.arguments.get(2));
-            
+                return String.format("{\"generations\": \"%s\", \"world\": \"%s\", \"scenario\": \"%s\"}",
+                        this.arguments.get(0), this.arguments.get(1), this.arguments.get(2));
+
             default:
                 return "";
-        }  
+        }
     }
 
     @Override

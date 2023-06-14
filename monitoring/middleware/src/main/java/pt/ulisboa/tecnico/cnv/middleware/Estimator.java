@@ -93,12 +93,12 @@ public class Estimator {
         int armyAvg = (army1 + army2) / 2;
 
         estimatedCost = (armyDiff * this.insectWarWeights.get(0) + armyAvg * this.insectWarWeights.get(1)
-                + max * this.insectWarWeights.get(2))*10000000;
+                + max * this.insectWarWeights.get(2)) * 10000000;
         return estimatedCost;
     }
 
     private double estimateCompression(Request request) {
-        
+
         int imagePixeis;
         String encodedImage = request.getArguments().get(0);
         byte[] decodedImage = Base64.getDecoder().decode(encodedImage);
@@ -106,7 +106,7 @@ public class Estimator {
             ByteArrayInputStream bais = new ByteArrayInputStream(decodedImage);
             BufferedImage bi = ImageIO.read(bais);
             imagePixeis = bi.getWidth() * bi.getHeight();
-        } catch(IOException e) {
+        } catch (IOException e) {
             LOGGER.log(e.getMessage());
             e.printStackTrace();
             return 0;
@@ -114,9 +114,9 @@ public class Estimator {
 
         String targetFormat = request.getArguments().get(1);
         int compressionFactor = Integer.parseInt(request.getArguments().get(2));
-        
+
         int estimatedCost;
-        switch(targetFormat) {
+        switch (targetFormat) {
             case "PNG":
                 estimatedCost = (int) Math.ceil(276958.771);
                 break;

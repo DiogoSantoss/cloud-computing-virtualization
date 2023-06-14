@@ -47,8 +47,6 @@ import com.amazonaws.services.lambda.model.InvokeRequest;
 import com.amazonaws.services.lambda.model.InvokeResult;
 import com.amazonaws.services.lambda.model.ServiceException;
 
-import java.nio.charset.StandardCharsets;
-
 import pt.ulisboa.tecnico.cnv.middleware.Utils.Pair;
 
 public class AWSInterface {
@@ -349,27 +347,31 @@ public class AWSInterface {
                 Map<String, Condition> filter = new HashMap<>();
 
                 Condition endpointCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ.toString())
-                    .withAttributeValueList(new AttributeValue().withS(request.getEndpoint().toString()));
+                        .withAttributeValueList(new AttributeValue().withS(request.getEndpoint().toString()));
 
                 filter.put("endpoint", endpointCondition);
 
-                switch(request.getEndpoint()) {
+                switch (request.getEndpoint()) {
                     case SIMULATION:
-                        Condition worldCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ.toString())
-                            .withAttributeValueList(
-                                new AttributeValue().withN(request.getArguments().get(1)));
+                        Condition worldCondition = new Condition()
+                                .withComparisonOperator(ComparisonOperator.EQ.toString())
+                                .withAttributeValueList(
+                                        new AttributeValue().withN(request.getArguments().get(1)));
                         filter.put("world", worldCondition);
-                        Condition generationCondition = new Condition().withComparisonOperator(ComparisonOperator.BETWEEN.toString())
-                            .withAttributeValueList(
-                                new AttributeValue().withN(String.valueOf(Integer.parseInt(request.getArguments().get(0)) - 50)),
-                                new AttributeValue().withN(String.valueOf(Integer.parseInt(request.getArguments().get(0) + 50))));
+                        Condition generationCondition = new Condition()
+                                .withComparisonOperator(ComparisonOperator.BETWEEN.toString())
+                                .withAttributeValueList(
+                                        new AttributeValue().withN(
+                                                String.valueOf(Integer.parseInt(request.getArguments().get(0)) - 50)),
+                                        new AttributeValue().withN(
+                                                String.valueOf(Integer.parseInt(request.getArguments().get(0) + 50))));
                         filter.put("generations", generationCondition);
-                        Condition scenarioCondition = new Condition().withComparisonOperator(ComparisonOperator.BETWEEN.toString())
-                            .withAttributeValueList(
-                                new AttributeValue().withN("1"),
-                                new AttributeValue().withN("4"));
+                        Condition scenarioCondition = new Condition()
+                                .withComparisonOperator(ComparisonOperator.BETWEEN.toString())
+                                .withAttributeValueList(
+                                        new AttributeValue().withN("1"),
+                                        new AttributeValue().withN("4"));
                         filter.put("scenario", scenarioCondition);
-
 
                         break;
                     case WAR:
@@ -382,8 +384,8 @@ public class AWSInterface {
                 }
 
                 ScanRequest scanRequest = new ScanRequest()
-                    .withTableName(DYNAMO_DB_TABLE_NAME)
-                    .withScanFilter(filter);
+                        .withTableName(DYNAMO_DB_TABLE_NAME)
+                        .withScanFilter(filter);
 
                 ScanResult scanResult = dynamoDB.scan(scanRequest);
 
@@ -408,12 +410,13 @@ public class AWSInterface {
                 }
 
                 Optional<Statistics> stat = getFromCache(request);
-                if(stat.isPresent()) {
+                if (stat.isPresent()) {
                     request.setEstimatedCost(stat.get().getInstructionCount());
                 } else {
-                    items.stream().mapToDouble(item -> Double.parseDouble(item.get("InstructionCount").getS())).average().ifPresent(avg -> {
-                        request.setEstimatedCost(avg);
-                    });
+                    items.stream().mapToDouble(item -> Double.parseDouble(item.get("InstructionCount").getS()))
+                            .average().ifPresent(avg -> {
+                                request.setEstimatedCost(avg);
+                            });
                 }
             }
         };

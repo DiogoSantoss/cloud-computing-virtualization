@@ -36,7 +36,7 @@ public class DynamoWriter implements Runnable {
 
     @Override
     public void run() {
-        for(;;) {
+        for (;;) {
             try {
                 LOGGER.info("Starting 10 second wait");
                 Thread.sleep(10000);
@@ -44,17 +44,18 @@ public class DynamoWriter implements Runnable {
                 e.printStackTrace();
             }
 
-            synchronized(Metrics.dynamoQueue) {
+            synchronized (Metrics.dynamoQueue) {
                 // Read first 25 elements from queue
                 workQueue.addAll(Metrics.dynamoQueue.subList(0, Math.min(25, Metrics.dynamoQueue.size())));
-                Metrics.dynamoQueue = Metrics.dynamoQueue.subList(Math.min(25, Metrics.dynamoQueue.size()), Metrics.dynamoQueue.size());
+                Metrics.dynamoQueue = Metrics.dynamoQueue.subList(Math.min(25, Metrics.dynamoQueue.size()),
+                        Metrics.dynamoQueue.size());
             }
-            
+
             LOGGER.info("Running scheduled DynamoDB write");
             if (workQueue.isEmpty()) {
                 LOGGER.info("No metrics to write");
                 continue;
-            } 
+            }
 
             Optional<List<PutItemRequest>> requests = Optional.of(this.workQueue.stream().map(m -> {
 
@@ -63,15 +64,17 @@ public class DynamoWriter implements Runnable {
                 String secondSplit[] = firstSplit[1].split("&");
 
                 String endpoint = firstSplit[0].split("/")[1];
-                List<String> parameters = Arrays.stream(secondSplit).map(s -> s.split("=")[1]).collect(Collectors.toList());
+                List<String> parameters = Arrays.stream(secondSplit).map(s -> s.split("=")[1])
+                        .collect(Collectors.toList());
 
                 Map<String, AttributeValue> item = new HashMap<>();
                 item.put("RequestParams", new AttributeValue().withS(m.getLeft()));
                 item.put("InstructionCount", new AttributeValue().withN(Long.toString(m.getRight().getInstCount())));
-                item.put("BasicBlockCount", new AttributeValue().withN(Long.toString(m.getRight().getBasicBlockCount())));
+                item.put("BasicBlockCount",
+                        new AttributeValue().withN(Long.toString(m.getRight().getBasicBlockCount())));
 
                 item.put("endpoint", new AttributeValue().withS(endpoint));
-                switch(endpoint) {
+                switch (endpoint) {
                     case "simulate":
                         item.put("generations", new AttributeValue().withS(parameters.get(0)));
                         item.put("world", new AttributeValue().withS(parameters.get(1)));

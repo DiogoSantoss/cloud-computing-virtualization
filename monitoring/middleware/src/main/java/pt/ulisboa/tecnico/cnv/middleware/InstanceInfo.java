@@ -6,7 +6,7 @@ import java.util.List;
 import com.amazonaws.services.ec2.model.Instance;
 
 public class InstanceInfo {
-    
+
     private Instance instance;
     private List<Request> requests;
     private int missedHealthChecks;

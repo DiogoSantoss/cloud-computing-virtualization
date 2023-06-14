@@ -19,10 +19,11 @@ import com.amazonaws.services.lambda.model.InvokeResult;
 
 public class LoadBalancerHandler implements HttpHandler {
 
-    private static final int MAX_LAMBDA_REQUESTS = 10;
     private final CustomLogger LOGGER = new CustomLogger(LoadBalancerHandler.class.getName());
-    private final AWSInterface awsInterface;
 
+    private final int MAX_TRIES = 3;
+
+    private final AWSInterface awsInterface;
     private final Estimator estimator;
 
     public LoadBalancerHandler(AWSInterface awsInterface) {
@@ -76,41 +77,72 @@ public class LoadBalancerHandler implements HttpHandler {
             return Optional.of(minInstance);
     }
 
+    @Override
+    public void handle(HttpExchange t) {
+
+        try {
+            // Handling CORS
+            t.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+
+            if (t.getRequestMethod().equalsIgnoreCase("OPTIONS")) {
+                t.getResponseHeaders().add("Access-Control-Allow-Methods", "GET,OPTIONS,POST");
+                t.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type,Authorization,API-Key");
+                t.sendResponseHeaders(204, -1);
+                return;
+            }
+
+            LOGGER.log("Handling request: " + t.getRequestURI().toString());
+
+            Request request = new Request(t.getRequestURI().toString(), t.getRequestBody());
+
+            // Get request (estimated or real) cost
+            this.estimateRequestCost(request);
+
+            int tries = MAX_TRIES;
+            while (!executeRequest(request, t)) {
+                tries--;
+                if (tries <= 0) {
+                    LOGGER.log("Failed to execute request.");
+                    t.sendResponseHeaders(500, -1);
+                    break;
+                }
+            }
+
+            t.close();
+
+        } catch (Exception e) {
+            LOGGER.log("Error: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
 
     public boolean executeRequest(Request request, HttpExchange t) {
-        Optional<InstanceInfo> optInstance = this.getLowestLoadedInstance(request);
 
+        Optional<InstanceInfo> optInstance = this.getLowestLoadedInstance(request);
         try {
             if (optInstance.isEmpty()) {
 
                 LOGGER.log("No instances available to handle request.");
-
-                LOGGER.log("Calling lambda function for request: " + request.getURI());
+                LOGGER.log("Calling lambda function");
 
                 String content = request.getLambdaRequest();
-                System.out.println("Content: " + content);
-
-                InvokeResult response = awsInterface.callLambda(request.getLambdaName(), content);    
-                
-                LOGGER.log("Lambda response status: " + response.getStatusCode());
+                InvokeResult response = awsInterface.callLambda(request.getLambdaName(), content);
 
                 int responseCode = response.getStatusCode();
 
-                if ( responseCode / 100 == 5) {
+                // Any 5XX error is considered a failure
+                if (responseCode / 100 == 5)
                     return false;
-                }
 
                 // Assume there is always a response
                 String ans = new String(response.getPayload().array(), StandardCharsets.UTF_8);
-                ans = ans.replace("\"","");
+                ans = ans.replace("\"", "");
 
-                //LOGGER.log("Lambda Response Content: " + ans);
-
-                t.sendResponseHeaders( responseCode, ans.length());
+                t.sendResponseHeaders(responseCode, ans.length());
                 OutputStream os = t.getResponseBody();
                 os.write(ans.toString().getBytes());
                 os.close();
-                
+
                 return true;
 
             } else {
@@ -126,47 +158,8 @@ public class LoadBalancerHandler implements HttpHandler {
 
         } catch (Exception e) {
             LOGGER.log("Error: retrying request");
-            return false;
-        }
-
-
-    }
-
-    @Override
-    public void handle(HttpExchange t) {
-
-        try {
-            // Handling CORS
-            t.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
-
-            if (t.getRequestMethod().equalsIgnoreCase("OPTIONS")) {
-                t.getResponseHeaders().add("Access-Control-Allow-Methods", "GET,OPTIONS,POST");
-                t.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type,Authorization,API-Key");
-                t.sendResponseHeaders(204, -1);
-                return;
-            }
-        
-            Request request = new Request(t.getRequestURI().toString(), t.getRequestBody());
-
-            // Get request (estimated or real) cost
-            this.estimateRequestCost(request);
-
-            int tries = 3;
-            
-            while (!executeRequest(request, t)) {
-                tries--;
-                if (tries <= 0) {
-                    LOGGER.log("Failed to execute request.");
-                    t.sendResponseHeaders(500, -1);
-                    break;
-                }
-            }
-
-            t.close();
-        
-        } catch (Exception e) {
-            LOGGER.log("Error: " + e.getMessage());
             e.printStackTrace();
+            return false;
         }
     }
 
@@ -186,7 +179,7 @@ public class LoadBalancerHandler implements HttpHandler {
         }
 
         request.setEstimatedCost(estimate);
-        LOGGER.log("Estimated cost: " + request.getEstimatedCost());
+        LOGGER.log("Estimated cost: " + estimate);
     }
 
     private HttpURLConnection sendRequestToWorker(InstanceInfo instance, Request request, HttpExchange t)
@@ -210,8 +203,8 @@ public class LoadBalancerHandler implements HttpHandler {
 
     private boolean replyToClient(HttpURLConnection con, HttpExchange t) throws IOException {
         int responseCode = con.getResponseCode();
-        
-        if ( responseCode / 100 != 5) { 
+
+        if (responseCode / 100 != 5) {
             LOGGER.log("Request handled successfully, replying to client...");
             BufferedReader rd = new BufferedReader(new InputStreamReader(con.getInputStream()));
             StringBuffer response = new StringBuffer();
@@ -225,9 +218,9 @@ public class LoadBalancerHandler implements HttpHandler {
             OutputStream os = t.getResponseBody();
             os.write(response.toString().getBytes());
             os.close();
-            
+
             return true;
-        } 
+        }
 
         return false;
     }

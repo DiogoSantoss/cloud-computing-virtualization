@@ -9,7 +9,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
 public class HealthCheckHandler implements HttpHandler, RequestHandler<Map<String, String>, String> {
-    
+
     @Override
     public void handle(HttpExchange r) throws IOException {
         String response = "OK";
