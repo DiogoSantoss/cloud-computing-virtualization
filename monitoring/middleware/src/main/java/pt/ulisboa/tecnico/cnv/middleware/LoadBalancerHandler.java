@@ -12,7 +12,10 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
+
+import java.nio.charset.StandardCharsets;
+
+import com.amazonaws.services.lambda.model.InvokeResult;
 
 public class LoadBalancerHandler implements HttpHandler {
 
@@ -22,13 +25,10 @@ public class LoadBalancerHandler implements HttpHandler {
 
     private final Estimator estimator;
 
-    private final AtomicInteger currentLambdaRequests;
-
     public LoadBalancerHandler(AWSInterface awsInterface) {
         super();
         this.awsInterface = awsInterface;
         this.estimator = new Estimator();
-        this.currentLambdaRequests = new AtomicInteger(0);
     }
 
     /*
@@ -76,6 +76,62 @@ public class LoadBalancerHandler implements HttpHandler {
             return Optional.of(minInstance);
     }
 
+
+    public boolean executeRequest(Request request, HttpExchange t) {
+        Optional<InstanceInfo> optInstance = this.getLowestLoadedInstance(request);
+
+        try {
+            if (optInstance.isEmpty()) {
+
+                LOGGER.log("No instances available to handle request.");
+
+                LOGGER.log("Calling lambda function for request: " + request.getURI());
+
+                String content = request.getLambdaRequest();
+                System.out.println("Content: " + content);
+
+                InvokeResult response = awsInterface.callLambda(request.getLambdaName(), content);    
+                
+                LOGGER.log("Lambda response status: " + response.getStatusCode());
+
+                int responseCode = response.getStatusCode();
+
+                if ( responseCode / 100 == 5) {
+                    return false;
+                }
+
+                // Assume there is always a response
+                String ans = new String(response.getPayload().array(), StandardCharsets.UTF_8);
+                ans = ans.replace("\"","");
+
+                //LOGGER.log("Lambda Response Content: " + ans);
+
+                t.sendResponseHeaders( responseCode, ans.length());
+                OutputStream os = t.getResponseBody();
+                os.write(ans.toString().getBytes());
+                os.close();
+                
+                return true;
+
+            } else {
+                InstanceInfo instance = optInstance.get();
+                instance.getRequests().add(request);
+
+                LOGGER.log("Forwarding request to instance: " + instance.getInstance().getInstanceId());
+
+                HttpURLConnection con = sendRequestToWorker(instance, request, t);
+                instance.getRequests().remove(request);
+                return replyToClient(con, t);
+            }
+
+        } catch (Exception e) {
+            LOGGER.log("Error: retrying request");
+            return false;
+        }
+
+
+    }
+
     @Override
     public void handle(HttpExchange t) {
 
@@ -95,58 +151,19 @@ public class LoadBalancerHandler implements HttpHandler {
             // Get request (estimated or real) cost
             this.estimateRequestCost(request);
 
-            Optional<InstanceInfo> optInstance = this.getLowestLoadedInstance(request);
-            if (optInstance.isEmpty()) {
-
-                LOGGER.log("No instances available to handle request.");
-
-                // TODO: Test if counter is correct
-                if (this.currentLambdaRequests.get() >= MAX_LAMBDA_REQUESTS) {
-                    LOGGER.log("Max lambda requests reached.");
-                    // TODO: Maybe launch new instance
-
-                    t.sendResponseHeaders(500, 0);
-                    t.close();
-                } else {
-                    LOGGER.log("Calling lambda function for request: " + request.getURI());
-
-                    this.currentLambdaRequests.incrementAndGet();
-
-                    String content = request.getLambdaRequest();
-                    System.out.println("Content: " + content);
-
-                    String response = awsInterface.callLambda(request.getLambdaName(), content);          
-                    response = response.replace("\"","");
-                    LOGGER.log("Lambda Content: " + response);
-
-                    this.currentLambdaRequests.decrementAndGet();
-
-                    if (response == null) {
-                        LOGGER.log("Error calling lambda function.");
-                        t.sendResponseHeaders(500, 0);
-                        t.close();
-
-                    } else {
-                        // LOGGER.log("Lambda function returned: " + response);
-                        t.sendResponseHeaders(200, response.length());
-                        OutputStream os = t.getResponseBody();
-                        os.write(response.toString().getBytes());
-                        os.close();
-                        t.close();
-                    }
+            int tries = 3;
+            
+            while (!executeRequest(request, t)) {
+                tries--;
+                if (tries <= 0) {
+                    LOGGER.log("Failed to execute request.");
+                    t.sendResponseHeaders(500, -1);
+                    break;
                 }
-
-            } else {
-                InstanceInfo instance = optInstance.get();
-                instance.getRequests().add(request);
-
-                LOGGER.log("Forwarding request to instance: " + instance.getInstance().getInstanceId());
-
-                HttpURLConnection con = sendRequestToWorker(instance, request, t);
-                instance.getRequests().remove(request);
-                replyToClient(con, t);
             }
 
+            t.close();
+        
         } catch (Exception e) {
             LOGGER.log("Error: " + e.getMessage());
             e.printStackTrace();
@@ -191,8 +208,10 @@ public class LoadBalancerHandler implements HttpHandler {
         return con;
     }
 
-    private void replyToClient(HttpURLConnection con, HttpExchange t) throws IOException {
-        if (con.getResponseCode() == HttpURLConnection.HTTP_OK) {
+    private boolean replyToClient(HttpURLConnection con, HttpExchange t) throws IOException {
+        int responseCode = con.getResponseCode();
+        
+        if ( responseCode / 100 != 5) { 
             LOGGER.log("Request handled successfully, replying to client...");
             BufferedReader rd = new BufferedReader(new InputStreamReader(con.getInputStream()));
             StringBuffer response = new StringBuffer();
@@ -202,14 +221,14 @@ public class LoadBalancerHandler implements HttpHandler {
             }
             rd.close();
 
-            t.sendResponseHeaders(200, response.length());
+            t.sendResponseHeaders(responseCode, response.length());
             OutputStream os = t.getResponseBody();
             os.write(response.toString().getBytes());
             os.close();
-            t.close();
-        } else {
-            t.sendResponseHeaders(500, 0);
-            t.close();
-        }
+            
+            return true;
+        } 
+
+        return false;
     }
 }

@@ -264,13 +264,11 @@ public class AWSInterface {
         return results;
     }
 
-    public String callLambda(String functionName, String json) {
+    public InvokeResult callLambda(String functionName, String json) {
 
         InvokeRequest invokeRequest = new InvokeRequest()
                 .withFunctionName(functionName)
                 .withPayload(json);
-
-        InvokeResult invokeResult = null;
 
         try {
             AWSLambda awsLambda = AWSLambdaClientBuilder.standard()
@@ -278,13 +276,7 @@ public class AWSInterface {
                     .withRegion(AWS_REGION)
                     .build();
 
-            invokeResult = awsLambda.invoke(invokeRequest);
-
-            LOGGER.log("Lambda response status: " + invokeResult.getStatusCode());
-
-            String ans = new String(invokeResult.getPayload().array(), StandardCharsets.UTF_8);
-
-            return ans;
+            return awsLambda.invoke(invokeRequest);
 
         } catch (ServiceException e) {
             LOGGER.log(e.getMessage());
