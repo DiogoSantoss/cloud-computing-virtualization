@@ -128,7 +128,7 @@ public class AWSInterface {
      */
     public List<String> createInstances(int count) {
 
-        LOGGER.log("Creating " + count + " instances");
+        LOGGER.log("Creating " + count + " instance(s)...");
 
         RunInstancesRequest runInstancesRequest = new RunInstancesRequest();
         runInstancesRequest.withImageId(AMI_ID)
@@ -261,14 +261,14 @@ public class AWSInterface {
         return results;
     }
 
-
     public List<Pair<String, Double>> queryCPUUtilizationHomeMade() {
         HttpClient client = HttpClient.newHttpClient();
         return this.aliveInstances.stream().map(instance -> {
             try {
                 HttpRequest request = HttpRequest.newBuilder()
                         .GET()
-                        .uri(new URI(String.format("http://%s:8000/loadavg", instance.getInstance().getPublicDnsName())))
+                        .uri(new URI(
+                                String.format("http://%s:8000/loadavg", instance.getInstance().getPublicDnsName())))
                         .build();
                 HttpResponse<String> machineLoadAvg = client.send(request, HttpResponse.BodyHandlers.ofString());
                 double load = Double.parseDouble(machineLoadAvg.body());
@@ -395,25 +395,25 @@ public class AWSInterface {
                                 .withComparisonOperator(ComparisonOperator.BETWEEN.toString())
                                 .withAttributeValueList(
                                         new AttributeValue().withN(
-                                            String.valueOf(Integer.parseInt(request.getArguments().get(0)) - 30)),
+                                                String.valueOf(Integer.parseInt(request.getArguments().get(0)) - 30)),
                                         new AttributeValue().withN(
-                                            String.valueOf(Integer.parseInt(request.getArguments().get(0)) + 30)));
+                                                String.valueOf(Integer.parseInt(request.getArguments().get(0)) + 30)));
                         filter.put("max", maxCondition);
                         Condition army1Condition = new Condition()
                                 .withComparisonOperator(ComparisonOperator.BETWEEN.toString())
                                 .withAttributeValueList(
                                         new AttributeValue().withN(
-                                            String.valueOf(Integer.parseInt(request.getArguments().get(1)) - 10)),
+                                                String.valueOf(Integer.parseInt(request.getArguments().get(1)) - 10)),
                                         new AttributeValue().withN(
-                                            String.valueOf(Integer.parseInt(request.getArguments().get(1)) + 10)));
+                                                String.valueOf(Integer.parseInt(request.getArguments().get(1)) + 10)));
                         filter.put("army1", army1Condition);
                         Condition army2Condition = new Condition()
                                 .withComparisonOperator(ComparisonOperator.BETWEEN.toString())
                                 .withAttributeValueList(
                                         new AttributeValue().withN(
-                                            String.valueOf(Integer.parseInt(request.getArguments().get(2)) - 10)),
+                                                String.valueOf(Integer.parseInt(request.getArguments().get(2)) - 10)),
                                         new AttributeValue().withN(
-                                            String.valueOf(Integer.parseInt(request.getArguments().get(2)) + 10)));
+                                                String.valueOf(Integer.parseInt(request.getArguments().get(2)) + 10)));
                         filter.put("army2", army2Condition);
 
                         break;
@@ -423,9 +423,10 @@ public class AWSInterface {
                                 .withComparisonOperator(ComparisonOperator.BETWEEN.toString())
                                 .withAttributeValueList(
                                         new AttributeValue().withN(
-                                            String.valueOf(Integer.parseInt(request.getArguments().get(0)) - 1000)),
+                                                String.valueOf(Integer.parseInt(request.getArguments().get(0)) - 1000)),
                                         new AttributeValue().withN(
-                                            String.valueOf(Integer.parseInt(request.getArguments().get(0)) + 1000)));
+                                                String.valueOf(
+                                                        Integer.parseInt(request.getArguments().get(0)) + 1000)));
                         filter.put("pixels", pixelsCondition);
                         Condition targetFormatCondition = new Condition()
                                 .withComparisonOperator(ComparisonOperator.EQ.toString())
@@ -436,9 +437,9 @@ public class AWSInterface {
                                 .withComparisonOperator(ComparisonOperator.BETWEEN.toString())
                                 .withAttributeValueList(
                                         new AttributeValue().withN(
-                                            String.valueOf(Integer.parseInt(request.getArguments().get(2)) - 0.1)),
+                                                String.valueOf(Integer.parseInt(request.getArguments().get(2)) - 0.1)),
                                         new AttributeValue().withN(
-                                            String.valueOf(Integer.parseInt(request.getArguments().get(2)) + 0.1)));
+                                                String.valueOf(Integer.parseInt(request.getArguments().get(2)) + 0.1)));
                         filter.put("compressionFactor", compressionFactorCondition);
 
                         break;
@@ -466,9 +467,6 @@ public class AWSInterface {
                                 Long.parseLong(item.get("InstCount").getN()),
                                 Long.parseLong(item.get("BasicBlockCount").getN()));
 
-                        LOGGER.log("Statistics found for request: " + request.getURI() + " with "
-                                + stat.getInstructionCount() + " instructions");
-
                         addToCache(stat);
                     });
                 }
@@ -476,11 +474,15 @@ public class AWSInterface {
                 Optional<Statistics> stat = getFromCache(request);
                 if (stat.isPresent()) {
                     request.setEstimatedCost(stat.get().getInstructionCount());
+                    LOGGER.log("Found exact match for request: " + request.getURI() + " with "
+                            + request.getEstimatedCost() + " instructions");
                 } else {
                     items.stream().mapToDouble(item -> Double.parseDouble(item.get("InstructionCount").getS()))
                             .average().ifPresent(avg -> {
                                 request.setEstimatedCost(avg);
                             });
+                    LOGGER.log("Found average match for request: " + request.getURI() + " with "
+                            + request.getEstimatedCost() + " instructions");
                 }
             }
         };

@@ -18,6 +18,8 @@ public class DynamoWriter implements Runnable {
 
     private final Logger LOGGER = Logger.getLogger(DynamoWriter.class.getName());
 
+    private final int DYNAMO_WRITE_TIMER = 10_000;
+
     private final String AWS_REGION = System.getenv("AWS_DEFAULT_REGION");
     private final String DYNAMO_DB_TABLE_NAME = System.getenv("DYNAMO_DB_TABLE_NAME");
 
@@ -39,7 +41,7 @@ public class DynamoWriter implements Runnable {
         for (;;) {
             try {
                 LOGGER.info("Starting 10 second wait");
-                Thread.sleep(10000);
+                Thread.sleep(DYNAMO_WRITE_TIMER);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -80,12 +82,12 @@ public class DynamoWriter implements Runnable {
                         item.put("world", new AttributeValue().withS(parameters.get(1)));
                         item.put("scenario", new AttributeValue().withS(parameters.get(2)));
                         break;
-                    case "insectwar":
+                    case "war":
                         item.put("max", new AttributeValue().withS(parameters.get(0)));
                         item.put("army1", new AttributeValue().withS(parameters.get(1)));
                         item.put("army2", new AttributeValue().withS(parameters.get(2)));
                         break;
-                    case "compressimage":
+                    case "compress":
                         item.put("pixels", new AttributeValue().withS(computePixels(parameters.get(0))));
                         item.put("targetFormat", new AttributeValue().withS(parameters.get(1)));
                         item.put("compressionFactor", new AttributeValue().withS(parameters.get(2)));

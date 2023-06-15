@@ -10,8 +10,11 @@ import java.util.logging.Logger;
 // CPU in lambdas
 public class LoadAvgHandler implements HttpHandler, Runnable {
 
-    private final Thread worker;
     private final Logger LOGGER = Logger.getLogger(LoadAvgHandler.class.getName());
+
+    private final int QUERY_TIMER = 10_000;
+
+    private final Thread worker;
 
     private String loadAvg = "0";
 
@@ -30,19 +33,22 @@ public class LoadAvgHandler implements HttpHandler, Runnable {
 
     @Override
     public void run() {
-        try {
-            for(;;) {
+        for (;;) {
+            try {
+                
                 BufferedReader reader = new BufferedReader(new FileReader("/proc/loadavg"));
                 String line = reader.readLine();
+                reader.close();
                 String[] averages = line.split(" ");
                 synchronized (this) {
                     loadAvg = averages[0];
                 }
-                Thread.sleep(10_000);
+                Thread.sleep(QUERY_TIMER);
+
+            } catch (Exception e) {
+                LOGGER.info("This should not happen");
+                e.printStackTrace();
             }
-        } catch (Exception e) {
-            LOGGER.info("This should not happen");
-            e.printStackTrace();
         }
     }
 }

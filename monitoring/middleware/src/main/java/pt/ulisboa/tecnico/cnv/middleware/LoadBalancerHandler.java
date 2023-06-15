@@ -153,6 +153,7 @@ public class LoadBalancerHandler implements HttpHandler {
 
                 HttpURLConnection con = sendRequestToWorker(instance, request, t);
                 instance.getRequests().remove(request);
+                LOGGER.log("Removed request from instance list");
                 return replyToClient(con, t);
             }
 
@@ -164,22 +165,24 @@ public class LoadBalancerHandler implements HttpHandler {
     }
 
     private void estimateRequestCost(Request request) {
-        double estimate;
         Optional<Statistics> cachedStatistics = this.awsInterface.getFromCache(request);
 
         if (cachedStatistics.isPresent()) {
             LOGGER.log("Cache hit for " + request.getURI());
-            estimate = cachedStatistics.get().getInstructionCount();
+            double estimate = cachedStatistics.get().getInstructionCount();
+            request.setEstimatedCost(estimate);
+            LOGGER.log("Real cost: " + estimate);
+
         } else {
             LOGGER.log("Cache miss for " + request.getURI());
-            estimate = this.estimator.estimate(request);
+            double estimate = this.estimator.estimate(request);
+            request.setEstimatedCost(estimate);
+            LOGGER.log("Estimated cost: " + estimate);
 
             // Fetch from db in the background (non-blocking)
             this.awsInterface.getFromStatistics(request);
         }
 
-        request.setEstimatedCost(estimate);
-        LOGGER.log("Estimated cost: " + estimate);
     }
 
     private HttpURLConnection sendRequestToWorker(InstanceInfo instance, Request request, HttpExchange t)

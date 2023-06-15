@@ -3,7 +3,7 @@
 # only source script if hostname is not chord (vasco)
 [ "$(hostname)" != "chord" ] && source my_config.sh
 
-echo "Creating loadbalancer/autoscaler instance..."
+echo "Creating monitoring instance..."
 
 # Run new instance
 aws ec2 run-instances \
