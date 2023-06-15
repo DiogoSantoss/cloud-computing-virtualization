@@ -201,27 +201,34 @@ public class LoadBalancerHandler implements HttpHandler {
         return con;
     }
 
-    private boolean replyToClient(HttpURLConnection con, HttpExchange t) throws IOException {
-        int responseCode = con.getResponseCode();
+    private boolean replyToClient(HttpURLConnection con, HttpExchange t) {        
+        try {
+            int responseCode = con.getResponseCode();
 
-        if (responseCode / 100 != 5) {
-            LOGGER.log("Request handled successfully, replying to client...");
-            BufferedReader rd = new BufferedReader(new InputStreamReader(con.getInputStream()));
-            StringBuffer response = new StringBuffer();
-            String line;
-            while ((line = rd.readLine()) != null) {
-                response.append(line);
+            if (responseCode / 100 != 5) {
+                LOGGER.log("Request handled successfully, replying to client...");
+                BufferedReader rd = new BufferedReader(new InputStreamReader(con.getInputStream()));
+                StringBuffer response = new StringBuffer();
+                String line;
+                while ((line = rd.readLine()) != null) {
+                    response.append(line);
+                }
+                rd.close();
+    
+                t.sendResponseHeaders(responseCode, response.length());
+                OutputStream os = t.getResponseBody();
+                os.write(response.toString().getBytes());
+                os.close();
+    
+                return true;
             }
-            rd.close();
+    
+            return false;
 
-            t.sendResponseHeaders(responseCode, response.length());
-            OutputStream os = t.getResponseBody();
-            os.write(response.toString().getBytes());
-            os.close();
-
+        } catch (IOException e) {
+            LOGGER.log("Error: retrying request");
+            e.printStackTrace();
             return true;
         }
-
-        return false;
     }
 }

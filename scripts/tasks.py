@@ -42,9 +42,9 @@ def sendAllRequests():
 
     # range [min, max]
     simulate_args = [
-        [1, 1000, 50],  # generations,
-        [1, 5, 1],  # world, NOTA VAI ATE 4 MAS MAIS 1 NO RANGE
-        [1, 4, 1]  # scenario NOTA VAI ATE 4 MAS MAIS 1 NO RANGE
+        [5500, 7000, 1],  # generations,
+        [4, 5, 1],  # world, NOTA VAI ATE 4 MAS MAIS 1 NO RANGE
+        [3, 4, 1]  # scenario NOTA VAI ATE 4 MAS MAIS 1 NO RANGE
     ]
 
     # for i in range(war_args[0][0], war_args[0][1], war_args[0][2]):  # max
@@ -111,12 +111,12 @@ def sendAllRequests():
     #         k)
     #     requests.get(simulate_endpoint)
 
-    # for i in range(simulate_args[0][0], simulate_args[0][1], simulate_args[0][2]): # generations
-    #     for k in range(simulate_args[2][0], simulate_args[2][1], simulate_args[2][2]):  # scenario
-    #         for j in range(simulate_args[1][0], simulate_args[1][1], simulate_args[1][2]): # world
-    #             simulate_endpoint = "http://localhost:8000/simulate?generations={}&world={}&scenario={}".format(i, j, k)
-    #             print(simulate_endpoint)
-    #             requests.get(simulate_endpoint)
+    for i in range(simulate_args[0][0], simulate_args[0][1], simulate_args[0][2]): # generations
+        for k in range(simulate_args[2][0], simulate_args[2][1], simulate_args[2][2]):  # scenario
+            for j in range(simulate_args[1][0], simulate_args[1][1], simulate_args[1][2]): # world
+                simulate_endpoint = "http://localhost:8000/simulate?generations={}&world={}&scenario={}".format(i, j, k)
+                print(simulate_endpoint)
+                requests.get(simulate_endpoint)
 
 
 def sendImages():
