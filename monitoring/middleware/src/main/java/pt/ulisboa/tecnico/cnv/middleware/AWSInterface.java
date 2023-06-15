@@ -375,12 +375,60 @@ public class AWSInterface {
 
                         break;
                     case WAR:
+                        Condition maxCondition = new Condition()
+                                .withComparisonOperator(ComparisonOperator.BETWEEN.toString())
+                                .withAttributeValueList(
+                                        new AttributeValue().withN(
+                                            String.valueOf(Integer.parseInt(request.getArguments().get(0)) - 30)),
+                                        new AttributeValue().withN(
+                                            String.valueOf(Integer.parseInt(request.getArguments().get(0)) + 30)));
+                        filter.put("max", maxCondition);
+                        Condition army1Condition = new Condition()
+                                .withComparisonOperator(ComparisonOperator.BETWEEN.toString())
+                                .withAttributeValueList(
+                                        new AttributeValue().withN(
+                                            String.valueOf(Integer.parseInt(request.getArguments().get(1)) - 10)),
+                                        new AttributeValue().withN(
+                                            String.valueOf(Integer.parseInt(request.getArguments().get(1)) + 10)));
+                        filter.put("army1", army1Condition);
+                        Condition army2Condition = new Condition()
+                                .withComparisonOperator(ComparisonOperator.BETWEEN.toString())
+                                .withAttributeValueList(
+                                        new AttributeValue().withN(
+                                            String.valueOf(Integer.parseInt(request.getArguments().get(2)) - 10)),
+                                        new AttributeValue().withN(
+                                            String.valueOf(Integer.parseInt(request.getArguments().get(2)) + 10)));
+                        filter.put("army2", army2Condition);
+
                         break;
 
                     case COMPRESSION:
-                        break;
+                        Condition pixelsCondition = new Condition()
+                                .withComparisonOperator(ComparisonOperator.BETWEEN.toString())
+                                .withAttributeValueList(
+                                        new AttributeValue().withN(
+                                            String.valueOf(Integer.parseInt(request.getArguments().get(0)) - 1000)),
+                                        new AttributeValue().withN(
+                                            String.valueOf(Integer.parseInt(request.getArguments().get(0)) + 1000)));
+                        filter.put("pixels", pixelsCondition);
+                        Condition targetFormatCondition = new Condition()
+                                .withComparisonOperator(ComparisonOperator.EQ.toString())
+                                .withAttributeValueList(
+                                        new AttributeValue().withS(request.getArguments().get(1)));
+                        filter.put("targetFormat", targetFormatCondition);
+                        Condition compressionFactorCondition = new Condition()
+                                .withComparisonOperator(ComparisonOperator.BETWEEN.toString())
+                                .withAttributeValueList(
+                                        new AttributeValue().withN(
+                                            String.valueOf(Integer.parseInt(request.getArguments().get(2)) - 0.1)),
+                                        new AttributeValue().withN(
+                                            String.valueOf(Integer.parseInt(request.getArguments().get(2)) + 0.1)));
+                        filter.put("compressionFactor", compressionFactorCondition);
 
+                        break;
                     default:
+                        LOGGER.log("Not a valid endpoint.");
+                        break;
                 }
 
                 ScanRequest scanRequest = new ScanRequest()

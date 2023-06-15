@@ -86,7 +86,7 @@ public class DynamoWriter implements Runnable {
                         item.put("army2", new AttributeValue().withS(parameters.get(2)));
                         break;
                     case "compressimage":
-                        item.put("resolution", new AttributeValue().withS(parameters.get(0)));
+                        item.put("pixels", new AttributeValue().withS(computePixels(parameters.get(0))));
                         item.put("targetFormat", new AttributeValue().withS(parameters.get(1)));
                         item.put("compressionFactor", new AttributeValue().withS(parameters.get(2)));
                         break;
@@ -160,5 +160,12 @@ public class DynamoWriter implements Runnable {
         for (Map<String, AttributeValue> item : result.getItems()) {
             System.out.println(item);
         }
+    }
+
+    private String computePixels(String resolution) {
+        String[] split = resolution.split("x");
+        int width = Integer.parseInt(split[0]);
+        int height = Integer.parseInt(split[1]);
+        return Integer.toString(width * height);
     }
 }
