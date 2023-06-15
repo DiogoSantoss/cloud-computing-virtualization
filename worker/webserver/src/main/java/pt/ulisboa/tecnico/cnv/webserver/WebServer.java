@@ -18,6 +18,7 @@ public class WebServer {
         server.createContext("/compressimage", new CompressImageHandlerImpl());
         server.createContext("/insectwar", new WarSimulationHandler());
         server.createContext("/test", new HealthCheckHandler());
+        server.createContext("/loadavg", new LoadAvgHandler());
         server.start();
 
         DynamoWriter dynamoWriter = new DynamoWriter();

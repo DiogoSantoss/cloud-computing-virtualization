@@ -42,11 +42,14 @@ public class AutoScaler implements Runnable {
         LOGGER.log("Running scale check...");
 
         // Average CPU utilization for each instance
-        List<Pair<String, Double>> results = this.awsInterface.queryCPUUtilization();
+        // List<Pair<String, Double>> results = this.awsInterface.queryCPUUtilization();
+        List<Pair<String, Double>> results = this.awsInterface.queryCPUUtilizationHomeMade();
+
+        results.forEach(r -> System.out.printf("%s:%f%n", r.first, r.second));
 
         double avgCPUUtilization = 0;
         for (Pair<String, Double> result : results) {
-            avgCPUUtilization += result.second;
+            avgCPUUtilization += result.second * 100;
         }
         avgCPUUtilization /= results.size();
 
@@ -85,7 +88,7 @@ public class AutoScaler implements Runnable {
     private void scaleDown() {
         LOGGER.log("Scaling down...");
         int numberOfInstances = this.awsInterface.getAliveInstances().size();
-        int newNumberOfInstances = (int) Math.ceil(numberOfInstances * 0.9);
+        int newNumberOfInstances = (int) Math.ceil(numberOfInstances * 0.1);
         int numberOfInstancesToTerminate = numberOfInstances - newNumberOfInstances;
         this.awsInterface.terminateInstances(numberOfInstancesToTerminate);
     }

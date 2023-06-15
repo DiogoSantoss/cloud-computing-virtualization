@@ -20,3 +20,7 @@ dependencies {
     implementation 'com.amazonaws:aws-java-sdk-sts'
 }
 
+compileJava {
+    sourceCompatibility = '11'
+    targetCompatibility = '11'
+}

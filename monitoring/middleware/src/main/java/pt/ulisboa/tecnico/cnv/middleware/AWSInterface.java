@@ -1,18 +1,15 @@
 package pt.ulisboa.tecnico.cnv.middleware;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Queue;
-import java.util.Set;
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
 
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
@@ -262,6 +259,25 @@ public class AWSInterface {
         }
 
         return results;
+    }
+
+
+    public List<Pair<String, Double>> queryCPUUtilizationHomeMade() {
+        HttpClient client = HttpClient.newHttpClient();
+        return this.aliveInstances.stream().map(instance -> {
+            try {
+                HttpRequest request = HttpRequest.newBuilder()
+                        .GET()
+                        .uri(new URI(String.format("http://%s:8000/loadavg", instance.getInstance().getPublicDnsName())))
+                        .build();
+                HttpResponse<String> machineLoadAvg = client.send(request, HttpResponse.BodyHandlers.ofString());
+                double load = Double.parseDouble(machineLoadAvg.body());
+                return new Pair<String, Double>(instance.getInstance().getInstanceId(), load);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return null;
+        }).filter(Objects::nonNull).collect(Collectors.toList());
     }
 
     public InvokeResult callLambda(String functionName, String json) {
