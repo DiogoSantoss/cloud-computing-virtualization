@@ -39,8 +39,6 @@ public class AutoScaler implements Runnable {
      */
     private void scale() {
 
-        LOGGER.log("Running scale check...");
-
         // Average CPU utilization for each instance
         // List<Pair<String, Double>> results = this.awsInterface.queryCPUUtilization();
         List<Pair<String, Double>> results = this.awsInterface.queryCPUUtilizationHomeMade();

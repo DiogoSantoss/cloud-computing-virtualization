@@ -362,7 +362,7 @@ public class AWSInterface {
 
                 Map<String, Condition> filter = new HashMap<>();
 
-                Condition endpointCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ.toString())
+                Condition endpointCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ)
                         .withAttributeValueList(new AttributeValue().withS(request.getEndpoint().toString()));
 
                 filter.put("endpoint", endpointCondition);
@@ -370,20 +370,21 @@ public class AWSInterface {
                 switch (request.getEndpoint()) {
                     case SIMULATION:
                         Condition worldCondition = new Condition()
-                                .withComparisonOperator(ComparisonOperator.EQ.toString())
+                                .withComparisonOperator(ComparisonOperator.EQ)
                                 .withAttributeValueList(
                                         new AttributeValue().withN(request.getArguments().get(1)));
                         filter.put("world", worldCondition);
                         Condition generationCondition = new Condition()
-                                .withComparisonOperator(ComparisonOperator.BETWEEN.toString())
+                                .withComparisonOperator(ComparisonOperator.BETWEEN)
                                 .withAttributeValueList(
                                         new AttributeValue().withN(
-                                                String.valueOf(Integer.parseInt(request.getArguments().get(0)) - 50)),
+                                                Integer.toString(Integer.parseInt(request.getArguments().get(0)) - 50)),
                                         new AttributeValue().withN(
-                                                String.valueOf(Integer.parseInt(request.getArguments().get(0) + 50))));
+                                                Integer.toString(
+                                                        Integer.parseInt(request.getArguments().get(0) + 50))));
                         filter.put("generations", generationCondition);
                         Condition scenarioCondition = new Condition()
-                                .withComparisonOperator(ComparisonOperator.BETWEEN.toString())
+                                .withComparisonOperator(ComparisonOperator.BETWEEN)
                                 .withAttributeValueList(
                                         new AttributeValue().withN("1"),
                                         new AttributeValue().withN("4"));
@@ -392,54 +393,60 @@ public class AWSInterface {
                         break;
                     case WAR:
                         Condition maxCondition = new Condition()
-                                .withComparisonOperator(ComparisonOperator.BETWEEN.toString())
+                                .withComparisonOperator(ComparisonOperator.BETWEEN)
                                 .withAttributeValueList(
                                         new AttributeValue().withN(
-                                                String.valueOf(Integer.parseInt(request.getArguments().get(0)) - 30)),
+                                                Integer.toString(Integer.parseInt(request.getArguments().get(0)) - 30)),
                                         new AttributeValue().withN(
-                                                String.valueOf(Integer.parseInt(request.getArguments().get(0)) + 30)));
+                                                Integer.toString(
+                                                        Integer.parseInt(request.getArguments().get(0)) + 30)));
                         filter.put("max", maxCondition);
                         Condition army1Condition = new Condition()
-                                .withComparisonOperator(ComparisonOperator.BETWEEN.toString())
+                                .withComparisonOperator(ComparisonOperator.BETWEEN)
                                 .withAttributeValueList(
                                         new AttributeValue().withN(
-                                                String.valueOf(Integer.parseInt(request.getArguments().get(1)) - 10)),
+                                                Integer.toString(Integer.parseInt(request.getArguments().get(1)) - 10)),
                                         new AttributeValue().withN(
-                                                String.valueOf(Integer.parseInt(request.getArguments().get(1)) + 10)));
+                                                Integer.toString(
+                                                        Integer.parseInt(request.getArguments().get(1)) + 10)));
                         filter.put("army1", army1Condition);
                         Condition army2Condition = new Condition()
-                                .withComparisonOperator(ComparisonOperator.BETWEEN.toString())
+                                .withComparisonOperator(ComparisonOperator.BETWEEN)
                                 .withAttributeValueList(
                                         new AttributeValue().withN(
-                                                String.valueOf(Integer.parseInt(request.getArguments().get(2)) - 10)),
+                                                Integer.toString(Integer.parseInt(request.getArguments().get(2)) - 10)),
                                         new AttributeValue().withN(
-                                                String.valueOf(Integer.parseInt(request.getArguments().get(2)) + 10)));
+                                                Integer.toString(
+                                                        Integer.parseInt(request.getArguments().get(2)) + 10)));
                         filter.put("army2", army2Condition);
 
                         break;
 
                     case COMPRESSION:
                         Condition pixelsCondition = new Condition()
-                                .withComparisonOperator(ComparisonOperator.BETWEEN.toString())
+                                .withComparisonOperator(ComparisonOperator.BETWEEN)
                                 .withAttributeValueList(
                                         new AttributeValue().withN(
-                                                String.valueOf(Integer.parseInt(request.getArguments().get(0)) - 1000)),
+                                                Integer.toString(
+                                                        Integer.parseInt(request.getArguments().get(0)) - 1000)),
                                         new AttributeValue().withN(
-                                                String.valueOf(
+                                                Integer.toString(
                                                         Integer.parseInt(request.getArguments().get(0)) + 1000)));
                         filter.put("pixels", pixelsCondition);
                         Condition targetFormatCondition = new Condition()
-                                .withComparisonOperator(ComparisonOperator.EQ.toString())
+                                .withComparisonOperator(ComparisonOperator.EQ)
                                 .withAttributeValueList(
                                         new AttributeValue().withS(request.getArguments().get(1)));
                         filter.put("targetFormat", targetFormatCondition);
                         Condition compressionFactorCondition = new Condition()
-                                .withComparisonOperator(ComparisonOperator.BETWEEN.toString())
+                                .withComparisonOperator(ComparisonOperator.BETWEEN)
                                 .withAttributeValueList(
                                         new AttributeValue().withN(
-                                                String.valueOf(Integer.parseInt(request.getArguments().get(2)) - 0.1)),
+                                                Double.toString(
+                                                        Double.parseDouble(request.getArguments().get(2)) - 0.1)),
                                         new AttributeValue().withN(
-                                                String.valueOf(Integer.parseInt(request.getArguments().get(2)) + 0.1)));
+                                                Double.toString(
+                                                        Double.parseDouble(request.getArguments().get(2)) + 0.1)));
                         filter.put("compressionFactor", compressionFactorCondition);
 
                         break;
@@ -458,13 +465,15 @@ public class AWSInterface {
                 if (items == null || items.size() == 0) {
                     LOGGER.log("No statistics found for request: " + request.getURI());
                     return;
+                } else {
+                    LOGGER.log("Found " + items.size() + " statistics for request: " + request.getURI());
                 }
 
                 synchronized (this) {
                     items.stream().forEach(item -> {
                         // Assuming every field is correct
                         Statistics stat = new Statistics(item.get("RequestParams").getS(),
-                                Long.parseLong(item.get("InstCount").getN()),
+                                Long.parseLong(item.get("InstructionCount").getN()),
                                 Long.parseLong(item.get("BasicBlockCount").getN()));
 
                         addToCache(stat);
@@ -477,7 +486,7 @@ public class AWSInterface {
                     LOGGER.log("Found exact match for request: " + request.getURI() + " with "
                             + request.getEstimatedCost() + " instructions");
                 } else {
-                    items.stream().mapToDouble(item -> Double.parseDouble(item.get("InstructionCount").getS()))
+                    items.stream().mapToDouble(item -> Double.parseDouble(item.get("InstructionCount").getN()))
                             .average().ifPresent(avg -> {
                                 request.setEstimatedCost(avg);
                             });

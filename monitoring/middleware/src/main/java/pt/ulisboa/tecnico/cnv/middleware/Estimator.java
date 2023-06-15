@@ -29,9 +29,9 @@ public class Estimator {
 
         // Precomputed weights for the insect wars
         this.insectWarWeights = new ArrayList<Double>();
-        this.insectWarWeights.add(0, 0.5);
-        this.insectWarWeights.add(1, 0.3);
-        this.insectWarWeights.add(2, 0.2);
+        this.insectWarWeights.add(0, 0.01);
+        this.insectWarWeights.add(1, 0.48);
+        this.insectWarWeights.add(2, 0.51);
     }
 
     public double estimate(Request request) {

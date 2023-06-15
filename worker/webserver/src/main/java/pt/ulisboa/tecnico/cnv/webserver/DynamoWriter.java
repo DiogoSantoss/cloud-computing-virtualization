@@ -78,19 +78,19 @@ public class DynamoWriter implements Runnable {
                 item.put("endpoint", new AttributeValue().withS(endpoint));
                 switch (endpoint) {
                     case "simulate":
-                        item.put("generations", new AttributeValue().withS(parameters.get(0)));
-                        item.put("world", new AttributeValue().withS(parameters.get(1)));
-                        item.put("scenario", new AttributeValue().withS(parameters.get(2)));
+                        item.put("generations", new AttributeValue().withN(parameters.get(0)));
+                        item.put("world", new AttributeValue().withN(parameters.get(1)));
+                        item.put("scenario", new AttributeValue().withN(parameters.get(2)));
                         break;
-                    case "war":
-                        item.put("max", new AttributeValue().withS(parameters.get(0)));
-                        item.put("army1", new AttributeValue().withS(parameters.get(1)));
-                        item.put("army2", new AttributeValue().withS(parameters.get(2)));
+                    case "insectwar":
+                        item.put("max", new AttributeValue().withN(parameters.get(0)));
+                        item.put("army1", new AttributeValue().withN(parameters.get(1)));
+                        item.put("army2", new AttributeValue().withN(parameters.get(2)));
                         break;
-                    case "compress":
-                        item.put("pixels", new AttributeValue().withS(computePixels(parameters.get(0))));
+                    case "compressimage":
+                        item.put("pixels", new AttributeValue().withN(computePixels(parameters.get(0))));
                         item.put("targetFormat", new AttributeValue().withS(parameters.get(1)));
-                        item.put("compressionFactor", new AttributeValue().withS(parameters.get(2)));
+                        item.put("compressionFactor", new AttributeValue().withN(parameters.get(2)));
                         break;
                 }
 

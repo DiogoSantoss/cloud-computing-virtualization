@@ -38,10 +38,6 @@ public class InstanceInfo {
     }
 
     public double getLoad() {
-
-        System.out.println("Instance " + this.instance.getInstanceId() + " has " + this.requests.size() + " requests.");
-        this.requests.forEach(r -> System.out.println("Request " + r.getURI() + " has cost " + r.getEstimatedCost()));
-
         return this.requests.stream().mapToDouble(r -> r.getEstimatedCost()).sum();
     }
 }

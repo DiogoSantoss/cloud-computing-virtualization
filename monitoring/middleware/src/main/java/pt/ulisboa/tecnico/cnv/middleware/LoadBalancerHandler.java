@@ -152,9 +152,9 @@ public class LoadBalancerHandler implements HttpHandler {
                 LOGGER.log("Forwarding request to instance: " + instance.getInstance().getInstanceId());
 
                 HttpURLConnection con = sendRequestToWorker(instance, request, t);
+                boolean successful =  replyToClient(con, t);
                 instance.getRequests().remove(request);
-                LOGGER.log("Removed request from instance list");
-                return replyToClient(con, t);
+                return successful;
             }
 
         } catch (Exception e) {

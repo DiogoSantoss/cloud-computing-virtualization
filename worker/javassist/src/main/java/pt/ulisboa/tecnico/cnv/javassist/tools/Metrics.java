@@ -171,7 +171,7 @@ public class Metrics extends AbstractJavassistTool {
                 && behavior.getDeclaringClass().getSimpleName().equals("InsectWars")) {
 
             behavior.insertBefore(String.format(
-                    "{%s.createMapping(\"/war?\" + \"max=\" + $1 + \"&army1=\" + $2 + \"&army2=\" + $3);}",
+                    "{%s.createMapping(\"/insectwar?\" + \"max=\" + $1 + \"&army1=\" + $2 + \"&army2=\" + $3);}",
                     Metrics.class.getName()));
 
             behavior.insertAfter(String.format("%s.addToStatistics();", Metrics.class.getName()));
@@ -194,7 +194,7 @@ public class Metrics extends AbstractJavassistTool {
                 && behavior.getDeclaringClass().getSimpleName().equals("CompressImageHandlerImpl")) {
 
             behavior.insertBefore(String.format(
-                    "{%s.createMapping(\"/compress?\"+ \"size=\" + $1.getWidth() +\"x\"+$1.getHeight() + \"&format=\"+$2+\"&compression=\"+$3);}",
+                    "{%s.createMapping(\"/compressimage?\"+ \"size=\" + $1.getWidth() +\"x\"+$1.getHeight() + \"&format=\"+$2+\"&compression=\"+$3);}",
                     Metrics.class.getName()));
 
             behavior.insertAfter(String.format("%s.addToStatistics();", Metrics.class.getName()));

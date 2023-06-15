@@ -33,8 +33,6 @@ public class HealthChecker implements Runnable {
 
     private void ping() {
 
-        LOGGER.log("Running health check...");
-
         // Health check every known instance
         Set<InstanceInfo> instances = new HashSet<>();
         instances.addAll(this.awsInterface.getAliveInstances());
@@ -103,7 +101,7 @@ public class HealthChecker implements Runnable {
             }
         });
 
-        LOGGER.log("Finished health check. Healthy instances: " + this.awsInterface.getAliveInstances().size()
+        LOGGER.log("Healthy instances: " + this.awsInterface.getAliveInstances().size()
                 + " Suspected instances: " + this.awsInterface.getSuspectedInstances().size() + ".");
     }
 }
