@@ -1,13 +1,8 @@
 package pt.ulisboa.tecnico.cnv.middleware;
 
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
-
-import javax.imageio.ImageIO;
 
 public class Estimator {
 
@@ -99,34 +94,23 @@ public class Estimator {
 
     private double estimateCompression(Request request) {
 
-        int imagePixeis;
-        String encodedImage = request.getArguments().get(0);
-        byte[] decodedImage = Base64.getDecoder().decode(encodedImage);
-        try {
-            ByteArrayInputStream bais = new ByteArrayInputStream(decodedImage);
-            BufferedImage bi = ImageIO.read(bais);
-            imagePixeis = bi.getWidth() * bi.getHeight();
-        } catch (IOException e) {
-            LOGGER.log(e.getMessage());
-            e.printStackTrace();
-            return 0;
-        }
+        int imagePixeis = Integer.parseInt(request.getArguments().get(3));
 
         String targetFormat = request.getArguments().get(1);
-        int compressionFactor = Integer.parseInt(request.getArguments().get(2));
+        double compressionFactor = Double.parseDouble(request.getArguments().get(2));
 
         int estimatedCost;
         switch (targetFormat) {
-            case "PNG":
+            case "png":
                 estimatedCost = (int) Math.ceil(276958.771);
                 break;
-            case "JPEG":
+            case "jpeg":
                 double baseSlope = 0.00268249844;
                 double maxSlope = 0.0266551814;
                 double slope = baseSlope + (maxSlope - baseSlope) * compressionFactor;
                 estimatedCost = (int) Math.ceil(slope * imagePixeis + 23000);
                 break;
-            case "BMP": // compression doens't affect
+            case "bmp": // compression doens't affect
                 estimatedCost = (int) Math.ceil(imagePixeis * 0.358 + 26088.4532);
                 break;
             default:

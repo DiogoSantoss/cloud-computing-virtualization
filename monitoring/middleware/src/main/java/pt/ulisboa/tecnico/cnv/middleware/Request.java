@@ -5,9 +5,15 @@ import com.sun.net.httpserver.HttpExchange;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.Base64;
 import java.io.InputStream;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.IOException;
+import java.io.ByteArrayInputStream;
+import java.awt.image.BufferedImage;
+
+import javax.imageio.ImageIO;
 
 public class Request {
 
@@ -80,11 +86,25 @@ public class Request {
         // image>
         String result = new BufferedReader(new InputStreamReader(bodyStream)).lines().collect(Collectors.joining("\n"));
         this.body = result.getBytes();
-
         String[] resultSplits = result.split(",");
+
+        int imagePixeis;
+        String encodedImage = resultSplits[1];
+        byte[] decodedImage = Base64.getDecoder().decode(encodedImage);
+
+        try {
+            ByteArrayInputStream bais = new ByteArrayInputStream(decodedImage);
+            BufferedImage bi = ImageIO.read(bais);
+            imagePixeis = bi.getWidth() * bi.getHeight();
+        } catch (IOException e) {
+            e.printStackTrace();
+            imagePixeis = 0;
+        }
+
         this.arguments.add(resultSplits[1]); // encoded image
         this.arguments.add(resultSplits[0].split(":")[1].split(";")[0]); // targetFormat
         this.arguments.add(resultSplits[0].split(":")[2].split(";")[0]); // compressionFactor
+        this.arguments.add(String.valueOf(imagePixeis)); // imagePixeis
     }
 
     public Endpoint getEndpoint() {

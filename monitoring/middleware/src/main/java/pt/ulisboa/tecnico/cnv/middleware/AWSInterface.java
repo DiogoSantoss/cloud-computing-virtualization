@@ -435,10 +435,10 @@ public class AWSInterface {
                                 .withAttributeValueList(
                                         new AttributeValue().withN(
                                                 Integer.toString(
-                                                        Integer.parseInt(request.getArguments().get(0)) - 1000)),
+                                                        Integer.parseInt(request.getArguments().get(3)) - 1000)),
                                         new AttributeValue().withN(
                                                 Integer.toString(
-                                                        Integer.parseInt(request.getArguments().get(0)) + 1000)));
+                                                        Integer.parseInt(request.getArguments().get(3)) + 1000)));
                         filter.put("pixels", pixelsCondition);
                         Condition targetFormatCondition = new Condition()
                                 .withComparisonOperator(ComparisonOperator.EQ)
