@@ -20,7 +20,7 @@ public class LoadBalancerHandler implements HttpHandler {
     private final CustomLogger LOGGER = new CustomLogger(LoadBalancerHandler.class.getName());
 
     private final int MAX_TRIES = 3;
-    private final double MAX_INSTANCE_INSTRUCTIONS = 4_000_000_000D;
+    private final double MAX_INSTANCE_INSTRUCTIONS = 20_000_000_000D;
 
     private final AWSInterface awsInterface;
     private final Estimator estimator;

@@ -101,12 +101,11 @@ public class HealthChecker implements Runnable {
                 this.loadBalancer.migrateRequests(instance);
                 this.awsInterface.removeSuspectedInstance(instance);
                 this.awsInterface.terminateInstance(instance);
-
-                // BIG TODO: Redirect requests to other instances
             }
         });
 
         LOGGER.log("Healthy instances: " + this.awsInterface.getAliveInstances().size()
-                + " Suspected instances: " + this.awsInterface.getSuspectedInstances().size() + ".");
+                + " Suspected instances: " + this.awsInterface.getSuspectedInstances().size()
+                + " Pending instances: " + this.awsInterface.getPendingInstances().size());
     }
 }

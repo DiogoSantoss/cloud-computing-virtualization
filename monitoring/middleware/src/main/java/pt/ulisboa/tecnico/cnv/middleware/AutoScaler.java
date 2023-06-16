@@ -62,8 +62,8 @@ public class AutoScaler implements Runnable {
         LOGGER.log("Average CPU Utilization: " + avgCPUUtilization + " (" + results.size() + " instances)");
 
         this.awsInterface.getAliveInstances().forEach(instance -> LOGGER
-                .log("Instance " + instance.getInstance().getInstanceId() + " load: " + instance.getLoad() + " with "
-                        + instance.getRequests().size() + " requests."));
+                .log("Instance " + instance.getInstance().getInstanceId() + " with load " + instance.getLoad() + " ("
+                        + instance.getRequests().size() + " requests)"));
 
         // Total requests enables us to avoid scaling up after a huge wave of requests
         int totalRequests = 0;
@@ -77,8 +77,6 @@ public class AutoScaler implements Runnable {
         } else if (avgCPUUtilization < 20 && this.awsInterface.getAliveInstances().size() > 1) {
             this.scaleDown();
         }
-        LOGGER.log("Finished scaling. Current number of instances: " + this.awsInterface.getAliveInstances().size()
-                + "\n");
     }
 
     /*

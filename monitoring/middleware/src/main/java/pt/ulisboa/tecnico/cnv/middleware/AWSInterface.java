@@ -116,6 +116,10 @@ public class AWSInterface {
         this.suspectedInstances.remove(instance);
     }
 
+    public Set<InstanceInfo> getPendingInstances() {
+        return this.pendingInstances;
+    }
+
     public int updateAndGetIdx() {
         return this.idx.updateAndGet(i -> (i + 1) % this.aliveInstances.size());
     }
