@@ -60,6 +60,8 @@ public class Request {
             case "/compressimage":
                 this.endpoint = Endpoint.COMPRESSION;
                 this.parseArgumentsBody(body);
+                this.originalURI += "?size=" + this.arguments.get(4) + "x" + this.arguments.get(5) + "&format="
+                        + this.arguments.get(1) + "&compression=" + this.arguments.get(2);
                 break;
             case "/simulate":
                 this.endpoint = Endpoint.SIMULATION;
@@ -89,22 +91,29 @@ public class Request {
         String[] resultSplits = result.split(",");
 
         int imagePixeis;
+        int width, height;
         String encodedImage = resultSplits[1];
         byte[] decodedImage = Base64.getDecoder().decode(encodedImage);
 
         try {
             ByteArrayInputStream bais = new ByteArrayInputStream(decodedImage);
             BufferedImage bi = ImageIO.read(bais);
-            imagePixeis = bi.getWidth() * bi.getHeight();
+            width = bi.getWidth();
+            height = bi.getHeight();
+            imagePixeis = width * height;
         } catch (IOException e) {
             e.printStackTrace();
             imagePixeis = 0;
+            width = 0;
+            height = 0;
         }
 
         this.arguments.add(resultSplits[1]); // encoded image
         this.arguments.add(resultSplits[0].split(":")[1].split(";")[0]); // targetFormat
         this.arguments.add(resultSplits[0].split(":")[2].split(";")[0]); // compressionFactor
         this.arguments.add(String.valueOf(imagePixeis)); // imagePixeis
+        this.arguments.add(String.valueOf(width)); // width
+        this.arguments.add(String.valueOf(height)); // height
     }
 
     public Endpoint getEndpoint() {
