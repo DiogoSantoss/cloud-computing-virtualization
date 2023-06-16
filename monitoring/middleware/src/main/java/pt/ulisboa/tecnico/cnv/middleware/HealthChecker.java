@@ -15,8 +15,11 @@ public class HealthChecker implements Runnable {
 
     private AWSInterface awsInterface;
 
-    public HealthChecker(AWSInterface awsInterface) {
+    private final LoadBalancerHandler loadBalancer;
+
+    public HealthChecker(AWSInterface awsInterface, LoadBalancerHandler loadBalancer) {
         this.awsInterface = awsInterface;
+        this.loadBalancer = loadBalancer;
     }
 
     @Override
@@ -95,6 +98,8 @@ public class HealthChecker implements Runnable {
             if (instance.getMissedHealthChecks() >= 3) {
                 LOGGER.log(
                         "Terminating instance " + instance.getInstance().getInstanceId() + ", missed 3 health checks.");
+                this.loadBalancer.migrateRequests(instance);
+                this.awsInterface.removeSuspectedInstance(instance);
                 this.awsInterface.terminateInstance(instance);
 
                 // BIG TODO: Redirect requests to other instances

@@ -1,5 +1,7 @@
 package pt.ulisboa.tecnico.cnv.middleware;
 
+import com.sun.net.httpserver.HttpExchange;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -33,14 +35,17 @@ public class Request {
     private List<String> arguments;
     private double estimatedCost;
 
+    private HttpExchange exchange;
+
     /*
      * Receive a URI (e.g. /compression?arg1=val1&arg2=val2&arg3=val3)
      * and parse it into a Request object.
      */
-    public Request(String URI, InputStream body) {
+    public Request(String URI, InputStream body, HttpExchange exchange) {
 
         this.arguments = new ArrayList<String>();
         this.originalURI = URI;
+        this.exchange = exchange;
         this.estimatedCost = 0;
 
         String[] parts = URI.split("\\?");
@@ -134,5 +139,9 @@ public class Request {
 
     public byte[] getBody() {
         return body;
+    }
+
+    public HttpExchange getExchange() {
+        return exchange;
     }
 }

@@ -14,8 +14,11 @@ public class WebServer {
         // AWS Interface
         AWSInterface awsInterface = new AWSInterface();
 
+        // LoadBalancer
+        LoadBalancerHandler loadBalancer = new LoadBalancerHandler(awsInterface);
+
         // Health Checker
-        HealthChecker healthChecker = new HealthChecker(awsInterface);
+        HealthChecker healthChecker = new HealthChecker(awsInterface, loadBalancer);
         Thread healthCheckerThread = new Thread(healthChecker);
         healthCheckerThread.start();
 
@@ -27,7 +30,7 @@ public class WebServer {
         // Load Balancer
         HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
         server.setExecutor(java.util.concurrent.Executors.newCachedThreadPool());
-        server.createContext("/", new LoadBalancerHandler(awsInterface));
+        server.createContext("/", loadBalancer);
         server.start();
         System.out.println("LoadBalancer started on port 8000...");
     }

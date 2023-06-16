@@ -68,7 +68,7 @@ public class AWSInterface {
 
     private AtomicInteger idx = new AtomicInteger(0);
     private Set<InstanceInfo> aliveInstances = new HashSet<InstanceInfo>();
-    private Set<InstanceInfo> suspectedInstances = new HashSet<InstanceInfo>();
+    private final Set<InstanceInfo> suspectedInstances = new HashSet<InstanceInfo>();
     private Set<InstanceInfo> pendingInstances = new HashSet<InstanceInfo>();
 
     // Cache for statistics

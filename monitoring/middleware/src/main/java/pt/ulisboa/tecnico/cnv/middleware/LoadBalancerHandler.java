@@ -91,7 +91,7 @@ public class LoadBalancerHandler implements HttpHandler {
 
             LOGGER.log("Handling request: " + t.getRequestURI().toString());
 
-            Request request = new Request(t.getRequestURI().toString(), t.getRequestBody());
+            Request request = new Request(t.getRequestURI().toString(), t.getRequestBody(), t);
 
             // Get request (estimated or real) cost
             this.estimateRequestCost(request);
@@ -228,5 +228,14 @@ public class LoadBalancerHandler implements HttpHandler {
             e.printStackTrace();
             return true;
         }
+    }
+
+    public void migrateRequests(InstanceInfo instance) {
+        instance.getRequests().forEach(request -> {
+            instance.getRequests().remove(request);
+            for(int i = 0; i < MAX_TRIES; i++)
+                if (executeRequest(request, request.getExchange()))
+                    break;
+        });
     }
 }
