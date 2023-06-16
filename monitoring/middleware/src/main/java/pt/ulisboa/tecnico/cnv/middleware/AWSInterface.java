@@ -1,10 +1,10 @@
 package pt.ulisboa.tecnico.cnv.middleware;
 
-import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -63,36 +63,33 @@ public class AWSInterface {
 
     private AmazonEC2 ec2;
     private AmazonCloudWatch cloudWatch;
-    // private LambdaClient lambdaClient;
+    private AWSLambda lambdaClient;
     private AmazonDynamoDB dynamoDB;
 
-    private Set<InstanceInfo> aliveInstances = new HashSet<InstanceInfo>();
     private AtomicInteger idx = new AtomicInteger(0);
-
+    private Set<InstanceInfo> aliveInstances = new HashSet<InstanceInfo>();
     private Set<InstanceInfo> suspectedInstances = new HashSet<InstanceInfo>();
+    private Set<InstanceInfo> pendingInstances = new HashSet<InstanceInfo>();
 
     // Cache for statistics
     private final int CACHE_CAPACITY = 512;
     private final Queue<Statistics> lruCache = new ConcurrentLinkedQueue<>();
     private final Map<String, Statistics> cacheItems = new ConcurrentHashMap<>();
 
-    // maybe for lambda calls
-    // private Set<InstanceInfo> pendingInstances = new HashSet<InstanceInfo>();
-
     public AWSInterface() {
         this.ec2 = AmazonEC2ClientBuilder.standard().withRegion(AWS_REGION)
                 .withCredentials(new EnvironmentVariableCredentialsProvider()).build();
         this.cloudWatch = AmazonCloudWatchClientBuilder.standard().withRegion(AWS_REGION)
                 .withCredentials(new EnvironmentVariableCredentialsProvider()).build();
-        // this.lambdaClient =
-        // LambdaClient.builder().credentialsProvider(EnvironmentVariableCredentialsProvider.create()).build();
+        this.lambdaClient = AWSLambdaClientBuilder.standard().withRegion(AWS_REGION)
+                .withCredentials(new EnvironmentVariableCredentialsProvider()).build();
         this.dynamoDB = AmazonDynamoDBAsyncClientBuilder.standard().withRegion(AWS_REGION)
                 .withCredentials(new EnvironmentVariableCredentialsProvider()).build();
 
         this.createTableIfNotExists();
 
         this.aliveInstances = queryAliveInstances();
-        LOGGER.log("Alive instances: " + this.aliveInstances.size());
+        LOGGER.log("Initial alive instances: " + this.aliveInstances.size());
     }
 
     public Set<InstanceInfo> getAliveInstances() {
@@ -146,6 +143,11 @@ public class AWSInterface {
             throw new RuntimeException("Error creating instances");
         }
 
+        List<InstanceInfo> pending = newInstances.stream().map(instance -> new InstanceInfo(instance))
+                .collect(Collectors.toList());
+
+        this.pendingInstances.addAll(pending);
+
         // wait until all instances are running
         while (newInstances.stream().filter(i -> i.getState().getName().equals("pending")).count() != 0) {
 
@@ -168,12 +170,14 @@ public class AWSInterface {
             }
         }
 
+        this.pendingInstances.removeAll(pending);
+        
         List<InstanceInfo> newInstancesInfo = newInstances.stream().map(i -> new InstanceInfo(i))
                 .collect(Collectors.toList());
 
         this.aliveInstances.addAll(newInstancesInfo);
 
-        LOGGER.log("Total instances: " + this.aliveInstances.size());
+        LOGGER.log("Alive instances: " + this.aliveInstances.size() + " Pending instances: " + this.pendingInstances.size());
 
         return newInstances.stream().map(i -> i.getInstanceId()).collect(Collectors.toList());
     }
@@ -280,23 +284,27 @@ public class AWSInterface {
         }).filter(Objects::nonNull).collect(Collectors.toList());
     }
 
-    public InvokeResult callLambda(String functionName, String json) {
+    public Optional<Pair<String, Integer>> callLambda(String functionName, String json) {
 
         InvokeRequest invokeRequest = new InvokeRequest()
                 .withFunctionName(functionName)
                 .withPayload(json);
-
         try {
-            AWSLambda awsLambda = AWSLambdaClientBuilder.standard()
-                    .withCredentials(new EnvironmentVariableCredentialsProvider())
-                    .withRegion(AWS_REGION)
-                    .build();
 
-            return awsLambda.invoke(invokeRequest);
+            InvokeResult result = this.lambdaClient.invoke(invokeRequest);
+            Integer responseCode = result.getStatusCode();
+            if (responseCode / 100 == 5)
+                return Optional.empty();
+
+            String response = new String(result.getPayload().array(), StandardCharsets.UTF_8);
+            response = response.replace("\"", "");
+
+            Pair<String, Integer> pair = new Pair<>(response, responseCode);
+            return Optional.of(pair);
 
         } catch (ServiceException e) {
             LOGGER.log(e.getMessage());
-            return null;
+            return Optional.empty();
         }
     }
 
@@ -369,11 +377,6 @@ public class AWSInterface {
 
                 switch (request.getEndpoint()) {
                     case SIMULATION:
-                        Condition worldCondition = new Condition()
-                                .withComparisonOperator(ComparisonOperator.EQ)
-                                .withAttributeValueList(
-                                        new AttributeValue().withN(request.getArguments().get(1)));
-                        filter.put("world", worldCondition);
                         Condition generationCondition = new Condition()
                                 .withComparisonOperator(ComparisonOperator.BETWEEN)
                                 .withAttributeValueList(
@@ -383,6 +386,11 @@ public class AWSInterface {
                                                 Integer.toString(
                                                         Integer.parseInt(request.getArguments().get(0) + 50))));
                         filter.put("generations", generationCondition);
+                        Condition worldCondition = new Condition()
+                                .withComparisonOperator(ComparisonOperator.EQ)
+                                .withAttributeValueList(
+                                        new AttributeValue().withN(request.getArguments().get(1)));
+                        filter.put("world", worldCondition);
                         Condition scenarioCondition = new Condition()
                                 .withComparisonOperator(ComparisonOperator.BETWEEN)
                                 .withAttributeValueList(

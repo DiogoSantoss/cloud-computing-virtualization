@@ -11,19 +11,18 @@ public class WebServer {
 
     public static void main(String[] args) throws Exception {
 
+        // AWS Interface
         AWSInterface awsInterface = new AWSInterface();
 
         // Health Checker
         HealthChecker healthChecker = new HealthChecker(awsInterface);
         Thread healthCheckerThread = new Thread(healthChecker);
         healthCheckerThread.start();
-        System.out.println("HealthChecker started...");
 
         // Auto Scaler
         AutoScaler autoScaler = new AutoScaler(awsInterface);
         Thread autoScalerThread = new Thread(autoScaler);
         autoScalerThread.start();
-        System.out.println("AutoScaler started...");
 
         // Load Balancer
         HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);

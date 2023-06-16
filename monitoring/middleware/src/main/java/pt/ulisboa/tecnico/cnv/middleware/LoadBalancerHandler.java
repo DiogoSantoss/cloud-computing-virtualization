@@ -3,6 +3,8 @@ package pt.ulisboa.tecnico.cnv.middleware;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
+import pt.ulisboa.tecnico.cnv.middleware.Utils.Pair;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -126,17 +128,14 @@ public class LoadBalancerHandler implements HttpHandler {
                 LOGGER.log("Calling lambda function");
 
                 String content = request.getLambdaRequest();
-                InvokeResult response = awsInterface.callLambda(request.getLambdaName(), content);
+                Optional<Pair<String,Integer>> answer = awsInterface.callLambda(request.getLambdaName(), content);
 
-                int responseCode = response.getStatusCode();
-
-                // Any 5XX error is considered a failure
-                if (responseCode / 100 == 5)
+                if (answer.isEmpty()) {
                     return false;
+                }
 
-                // Assume there is always a response
-                String ans = new String(response.getPayload().array(), StandardCharsets.UTF_8);
-                ans = ans.replace("\"", "");
+                String ans = answer.get().getFirst();
+                Integer responseCode = answer.get().getSecond();
 
                 t.sendResponseHeaders(responseCode, ans.length());
                 OutputStream os = t.getResponseBody();
