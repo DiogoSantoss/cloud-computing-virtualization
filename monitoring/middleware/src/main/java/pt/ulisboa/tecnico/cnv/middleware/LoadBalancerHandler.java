@@ -15,10 +15,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import java.nio.charset.StandardCharsets;
-
-import com.amazonaws.services.lambda.model.InvokeResult;
-
 public class LoadBalancerHandler implements HttpHandler {
 
     private final CustomLogger LOGGER = new CustomLogger(LoadBalancerHandler.class.getName());
