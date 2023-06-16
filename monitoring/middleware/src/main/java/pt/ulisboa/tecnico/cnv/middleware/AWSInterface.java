@@ -200,17 +200,16 @@ public class AWSInterface {
         // Remove from aliveInstances to prevent new requests
         this.aliveInstances.removeAll(instancesToTerminate);
 
-        // Wait for instances to finish requests and terminate the instances
-        while (instancesToTerminate.size() != 0) {
-            for (InstanceInfo instance : instancesToTerminate) {
-                // Safe to terminate
-                if (instance.getRequests().size() == 0) {
-                    TerminateInstancesRequest termInstanceReq = new TerminateInstancesRequest();
-                    termInstanceReq.withInstanceIds(instance.getInstance().getInstanceId());
-                    this.ec2.terminateInstances(termInstanceReq);
-                    instancesToTerminate.remove(instance);
-                }
-            }
+        // Wait for instances to finish requests 
+        while(instancesToTerminate.stream()
+                .map(instance -> instance.getRequests().size())
+                .reduce(0, Integer::sum) != 0) { }
+
+        // Terminate instances
+        for(InstanceInfo instance: instancesToTerminate) {
+            TerminateInstancesRequest termInstanceReq = new TerminateInstancesRequest();
+            termInstanceReq.withInstanceIds(instance.getInstance().getInstanceId());
+            this.ec2.terminateInstances(termInstanceReq);
         }
     }
 
@@ -275,7 +274,7 @@ public class AWSInterface {
                                 String.format("http://%s:8000/loadavg", instance.getInstance().getPublicDnsName())))
                         .build();
                 HttpResponse<String> machineLoadAvg = client.send(request, HttpResponse.BodyHandlers.ofString());
-                double load = Double.parseDouble(machineLoadAvg.body());
+                double load = Double.parseDouble(machineLoadAvg.body()) * 100;
                 return new Pair<String, Double>(instance.getInstance().getInstanceId(), load);
             } catch (Exception e) {
                 e.printStackTrace();

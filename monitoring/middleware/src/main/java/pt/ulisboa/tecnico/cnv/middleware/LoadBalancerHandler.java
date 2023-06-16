@@ -20,6 +20,7 @@ public class LoadBalancerHandler implements HttpHandler {
     private final CustomLogger LOGGER = new CustomLogger(LoadBalancerHandler.class.getName());
 
     private final int MAX_TRIES = 3;
+    private final double MAX_INSTANCE_INSTRUCTIONS = 4_000_000_000D;
 
     private final AWSInterface awsInterface;
     private final Estimator estimator;
@@ -53,26 +54,43 @@ public class LoadBalancerHandler implements HttpHandler {
      */
     public Optional<InstanceInfo> getLowestLoadedInstance(Request request) {
 
-        List<InstanceInfo> instances = new ArrayList<InstanceInfo>(this.awsInterface.getAliveInstances());
+        double cost = request.getEstimatedCost();
 
-        if (instances.size() == 0)
-            return Optional.empty();
-
-        double min = Double.MAX_VALUE;
-        InstanceInfo minInstance = null;
-
-        for (InstanceInfo instance : instances) {
-            double size = instance.getRequests().stream().mapToDouble(r -> r.getEstimatedCost()).sum();
-            if (size < min) {
-                min = size;
-                minInstance = instance;
+        while(true) {
+            List<InstanceInfo> instances = new ArrayList<InstanceInfo>(this.awsInterface.getAliveInstances());
+    
+            if (instances.size() == 0)
+                return Optional.empty();
+    
+            double min = Double.MAX_VALUE;
+            InstanceInfo minInstance = null;
+    
+            for (InstanceInfo instance : instances) {
+                double size = instance.getRequests().stream().mapToDouble(r -> r.getEstimatedCost()).sum();
+                if (size < min && MAX_INSTANCE_INSTRUCTIONS - size > cost) {
+                    min = size;
+                    minInstance = instance;
+                }
             }
+    
+            // Either we have a big request and must wait for a new instance
+            // or we can send it to a lambda function
+            if (minInstance == null) {
+                if (cost > MAX_INSTANCE_INSTRUCTIONS * 0.20) {
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    continue;
+                } else {
+                    return Optional.empty();
+                }
+            }
+    
+            return Optional.of(minInstance);
         }
 
-        if (minInstance == null)
-            return Optional.empty();
-        else
-            return Optional.of(minInstance);
     }
 
     @Override

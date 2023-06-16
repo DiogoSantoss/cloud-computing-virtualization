@@ -1,5 +1,6 @@
 package pt.ulisboa.tecnico.cnv.middleware;
 
+import java.util.Iterator;
 import java.util.List;
 
 import pt.ulisboa.tecnico.cnv.middleware.Utils.Pair;
@@ -45,7 +46,7 @@ public class AutoScaler implements Runnable {
 
         double avgCPUUtilization = 0;
         for (Pair<String, Double> result : results) {
-            avgCPUUtilization += result.getSecond() * 100;
+            avgCPUUtilization += result.getSecond();
         }
         avgCPUUtilization /= results.size();
 
@@ -55,13 +56,23 @@ public class AutoScaler implements Runnable {
         }
 
         results.stream()
-                .forEach(result -> LOGGER.log("Instance " + result.getFirst() + " CPU Utilization: " + result.getSecond() + "%"));
-        LOGGER.log("Average CPU Utilization: " + avgCPUUtilization + " (" + results.size() + " instances)");
-        this.awsInterface.getAliveInstances().forEach(
-                instance -> LOGGER
-                        .log("Instance " + instance.getInstance().getInstanceId() + " load: " + instance.getLoad()));
+                .forEach(result -> LOGGER
+                        .log("Instance " + result.getFirst() + " CPU Utilization: " + result.getSecond() + "%"));
 
-        if (avgCPUUtilization > 80) {
+        LOGGER.log("Average CPU Utilization: " + avgCPUUtilization + " (" + results.size() + " instances)");
+
+        this.awsInterface.getAliveInstances().forEach(instance -> LOGGER
+                .log("Instance " + instance.getInstance().getInstanceId() + " load: " + instance.getLoad() + " with "
+                        + instance.getRequests().size() + " requests."));
+
+        // Total requests enables us to avoid scaling up after a huge wave of requests
+        int totalRequests = 0;
+        Iterator<InstanceInfo> instance = this.awsInterface.getAliveInstances().iterator();
+        while(instance.hasNext()) {
+            totalRequests += instance.next().getRequests().size();
+        }
+
+        if (avgCPUUtilization > 80 && totalRequests != 0) {
             this.scaleUp();
         } else if (avgCPUUtilization < 20 && this.awsInterface.getAliveInstances().size() > 1) {
             this.scaleDown();

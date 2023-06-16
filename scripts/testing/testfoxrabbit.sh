@@ -7,11 +7,12 @@ PORT=$2
 GENERATIONS=$3
 WORLD=$4
 SCENARIO=$5
+TIMEOUT=30 #default is 30s
 
 function test_batch_requests {
 	REQUESTS=100
-	CONNECTIONS=3
-	ab -n $REQUESTS -c $CONNECTIONS $HOST:$PORT/simulate\?generations=$GENERATIONS\&world=$WORLD\&scenario=$SCENARIO
+	CONNECTIONS=10
+	ab -s $TIMEOUT -n $REQUESTS -c $CONNECTIONS $HOST:$PORT/simulate\?generations=$GENERATIONS\&world=$WORLD\&scenario=$SCENARIO
 }
 
 function test_single_requests {
