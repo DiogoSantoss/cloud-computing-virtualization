@@ -60,8 +60,6 @@ public class Request {
             case "/compressimage":
                 this.endpoint = Endpoint.COMPRESSION;
                 this.parseArgumentsBody(body);
-                this.originalURI += "?size=" + this.arguments.get(4) + "x" + this.arguments.get(5) + "&format="
-                        + this.arguments.get(1) + "&compression=" + this.arguments.get(2);
                 break;
             case "/simulate":
                 this.endpoint = Endpoint.SIMULATION;
@@ -112,8 +110,9 @@ public class Request {
         this.arguments.add(resultSplits[0].split(":")[1].split(";")[0]); // targetFormat
         this.arguments.add(resultSplits[0].split(":")[2].split(";")[0]); // compressionFactor
         this.arguments.add(String.valueOf(imagePixeis)); // imagePixeis
-        this.arguments.add(String.valueOf(width)); // width
-        this.arguments.add(String.valueOf(height)); // height
+
+        this.originalURI += "?size=" + String.valueOf(width) + "x" + String.valueOf(height) + "&format="
+                + this.arguments.get(1) + "&compression=" + this.arguments.get(2);
     }
 
     public Endpoint getEndpoint() {
