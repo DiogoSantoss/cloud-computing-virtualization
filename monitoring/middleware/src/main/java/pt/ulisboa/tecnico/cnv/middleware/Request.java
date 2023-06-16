@@ -41,6 +41,7 @@ public class Request {
 
         this.arguments = new ArrayList<String>();
         this.originalURI = URI;
+        this.estimatedCost = 0;
 
         String[] parts = URI.split("\\?");
 

@@ -9,8 +9,8 @@ WORLD=$4
 SCENARIO=$5
 
 function test_batch_requests {
-	REQUESTS=3
-	CONNECTIONS=1
+	REQUESTS=100
+	CONNECTIONS=3
 	ab -n $REQUESTS -c $CONNECTIONS $HOST:$PORT/simulate\?generations=$GENERATIONS\&world=$WORLD\&scenario=$SCENARIO
 }
 
