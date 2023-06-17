@@ -1,6 +1,6 @@
 package pt.ulisboa.tecnico.cnv.middleware;
 
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,21 +31,31 @@ public class Estimator {
 
     public double estimate(Request request) {
         double estimatedCost = 0;
-        switch (request.getEndpoint()) {
-            case SIMULATION:
-                estimatedCost = this.estimateSimulation(request);
-                break;
-            case WAR:
-                estimatedCost = this.estimateInsectWars(request);
-                break;
-            case COMPRESSION:
-                estimatedCost = this.estimateCompression(request);
-                break;
-            default:
-                estimatedCost = 0;
+        try (PrintWriter pr = new PrintWriter(new BufferedWriter(new FileWriter("estimates.csv", true)))) {
+            switch (request.getEndpoint()) {
+                case SIMULATION:
+                    estimatedCost = this.estimateSimulation(request);
+                    break;
+                case WAR:
+                    estimatedCost = this.estimateInsectWars(request);
+                    break;
+                case COMPRESSION:
+                    estimatedCost = this.estimateCompression(request);
+                    break;
+                default:
+                    estimatedCost = 0;
+            }
+
+            pr.printf("%s,%s,%s,%s,%f%n", request.getEndpoint(), request.getArguments().get(0), request.getArguments().get(1), request.getArguments().get(2), estimatedCost);
+            LOGGER.log("Estimated cost for " + request + " is " + estimatedCost);
+            // endpoint, 3 args,
+            // insectwars: max, army1, army2
+            // compression: res, format, compression
+            // foxes: generations, world, scenario
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
 
-        LOGGER.log("Estimated cost for " + request.toString() + " is " + estimatedCost);
         return estimatedCost;
     }
 

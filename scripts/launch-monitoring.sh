@@ -40,10 +40,10 @@ ssh -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEYPAR_PATH ec2-user@$(cat monit
 scp -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEYPAR_PATH ../monitoring/webserver/build/libs/webserver.jar ec2-user@$(cat monitoring.dns):
 
 # Copy config file
-scp -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEYPAR_PATH ../scripts/my_config.sh ec2-user@$(cat monitoring.dns):
+scp -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEYPAR_PATH ./my_config.sh ec2-user@$(cat monitoring.dns):
 
 # Copy the image id
-scp -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEYPAR_PATH ../scripts/image.id ec2-user@$(cat monitoring.dns):
+scp -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEYPAR_PATH ./image.id ec2-user@$(cat monitoring.dns):
 
 # Start webserver
 cmd="source my_config.sh && java -cp /home/ec2-user/webserver.jar pt.ulisboa.tecnico.cnv.webserver.WebServer"
