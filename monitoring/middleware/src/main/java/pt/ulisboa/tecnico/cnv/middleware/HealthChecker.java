@@ -27,7 +27,7 @@ public class HealthChecker implements Runnable {
         while (true) {
             this.ping();
             try {
-                Thread.sleep(TIMER);
+                Thread.sleep(2000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

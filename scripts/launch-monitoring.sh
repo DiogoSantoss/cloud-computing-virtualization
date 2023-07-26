@@ -2,6 +2,7 @@
 
 # only source script if hostname is not chord (vasco)
 [ "$(hostname)" != "chord" ] && source my_config.sh
+[ "$(hostname)" == "chord" ] && cat ../.envrc | grep -i export | tee my_config.sh
 
 echo "Creating monitoring instance..."
 
@@ -47,4 +48,4 @@ scp -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEYPAR_PATH ../scripts/image.id 
 
 # Start webserver
 cmd="source my_config.sh && java -cp /home/ec2-user/webserver.jar pt.ulisboa.tecnico.cnv.webserver.WebServer"
-ssh -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEYPAR_PATH ec2-user@$(cat monitoring.dns) $cmd &
+ssh -o StrictHostKeyChecking=no -i $AWS_EC2_SSH_KEYPAR_PATH ec2-user@$(cat monitoring.dns) $cmd

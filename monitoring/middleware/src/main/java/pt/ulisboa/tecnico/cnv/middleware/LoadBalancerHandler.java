@@ -122,6 +122,11 @@ public class LoadBalancerHandler implements HttpHandler {
                     t.sendResponseHeaders(500, -1);
                     break;
                 }
+                try {
+                    Thread.sleep(5000);
+                } catch (Exception e) {
+
+                }
             }
 
             t.close();
@@ -244,7 +249,7 @@ public class LoadBalancerHandler implements HttpHandler {
         } catch (IOException e) {
             LOGGER.log("Error: retrying request");
             e.printStackTrace();
-            return true;
+            return false;
         }
     }
 

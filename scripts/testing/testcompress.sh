@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Syntax:  ./testcompress.sh <ip> <port> <input image>
 # Example: ./testcompress.sh 127.0.0.1 8000 res/Ct0zUz-XgAAV69z.jpg

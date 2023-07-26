@@ -44,6 +44,7 @@ import com.amazonaws.services.lambda.model.InvokeRequest;
 import com.amazonaws.services.lambda.model.InvokeResult;
 import com.amazonaws.services.lambda.model.ServiceException;
 
+import com.amazonaws.waiters.WaiterParameters;
 import pt.ulisboa.tecnico.cnv.middleware.Utils.Pair;
 
 public class AWSInterface {
@@ -152,28 +153,15 @@ public class AWSInterface {
 
         this.pendingInstances.addAll(pending);
 
-        // wait until all instances are running
-        while (newInstances.stream().filter(i -> i.getState().getName().equals("pending")).count() != 0) {
+        ec2.waiters().instanceRunning().run(new WaiterParameters<DescribeInstancesRequest>()
+                .withRequest(new DescribeInstancesRequest().withInstanceIds(newInstances.stream().map(Instance::getInstanceId).collect(Collectors.toList()))));
 
-            List<Reservation> reservations = this.ec2.describeInstances(
-                    new DescribeInstancesRequest()
-                            .withFilters(new Filter()
-                                    .withName("reservation-id")
-                                    .withValues(reservationId)))
-                    .getReservations();
+        List<Instance> refreshedInstances = new ArrayList<>();
+        this.ec2.describeInstances(new DescribeInstancesRequest().withInstanceIds(
+                newInstances.stream().map(Instance::getInstanceId).collect(Collectors.toList())
+        )).getReservations().forEach(r -> refreshedInstances.addAll(r.getInstances()));
 
-            if (reservations.size() > 0)
-                newInstances = reservations.get(0).getInstances();
-            else
-                break;
-
-            try {
-                Thread.sleep(QUERY_COOLDOWN);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-
+        newInstances = refreshedInstances;
         this.pendingInstances.removeAll(pending);
         
         List<InstanceInfo> newInstancesInfo = newInstances.stream().map(i -> new InstanceInfo(i))
@@ -183,7 +171,7 @@ public class AWSInterface {
 
         LOGGER.log("Alive instances: " + this.aliveInstances.size() + " Pending instances: " + this.pendingInstances.size());
 
-        return newInstances.stream().map(i -> i.getInstanceId()).collect(Collectors.toList());
+        return newInstances.stream().map(Instance::getInstanceId).collect(Collectors.toList());
     }
 
     public void terminateInstance(InstanceInfo instance) {

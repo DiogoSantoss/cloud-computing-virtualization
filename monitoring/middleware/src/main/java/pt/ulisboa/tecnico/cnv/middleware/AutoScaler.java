@@ -72,7 +72,7 @@ public class AutoScaler implements Runnable {
             totalRequests += instance.next().getRequests().size();
         }
 
-        if (avgCPUUtilization > 80 && totalRequests != 0) {
+        if ((avgCPUUtilization > 80 && totalRequests != 0) || this.awsInterface.getAliveInstances().size() == 0) {
             this.scaleUp();
         } else if (avgCPUUtilization < 20 && this.awsInterface.getAliveInstances().size() > 1) {
             this.scaleDown();
@@ -97,7 +97,6 @@ public class AutoScaler implements Runnable {
         LOGGER.log("Scaling down...");
         int numberOfInstances = this.awsInterface.getAliveInstances().size();
         int newNumberOfInstances = (int) Math.ceil(numberOfInstances * 0.1);
-        int numberOfInstancesToTerminate = numberOfInstances - newNumberOfInstances;
-        this.awsInterface.terminateInstances(numberOfInstancesToTerminate);
+        this.awsInterface.terminateInstances(newNumberOfInstances);
     }
 }

@@ -1,5 +1,8 @@
 # EcoWorld@Cloud
 
+Set of services (Compression, Foxes-Rabbits and Insect-War) hosted on AWS (EC2 and Lambda) with self designed Load Balancer and Auto-Scaling algorithms that rely on the instruction count of each request measured by Javassist to ensure low expenditure and high availability.
+Further details can be found in the [report](/report/report.pdf), where we explain the Architecture, Instrumentation Metrics, Data Structures, Request Cost Estimation, Scheduling Algorithm, Auto-Scaling Algorithm and Fault-Tolerance in great detail.
+
 ## Architecture
 
 ### Monitoring
